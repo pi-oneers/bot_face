@@ -1,0 +1,102 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+    <title>Pi Robot</title>
+
+    <link href="/css/bootstrap.css" rel="stylesheet">
+
+    <style>
+      .thin.container {
+        max-width:700px;
+      }
+    </style>
+    
+    <style type="text/css">
+        .joystick {
+            position: relative;
+            width: 130px;
+            height: 130px;
+            background-color: #eee;
+        }
+        .joystick .handle {
+            position: absolute;
+            width: 24px;
+            height: 24px;
+            background-color: rgb(201, 44, 44);
+            border: 1px solid rgb(107, 35, 35);
+            border-radius: 5px;
+        }
+    </style>
+    
+    <script src="js/jquery.js"></script>
+    <script src="js/jquery.form.js"></script>
+    <script src="js/bootstrap.min.js"></script>
+    <script src="js/jquery.joystick.js"></script>
+    
+    <script>
+        $(document).ready(function() { 
+            $('#move').ajaxForm();
+            
+            $('#motor_stick').joystick({
+                xSnap: true,
+                ySnap: true,
+                moveEvent: function(pos) {
+                    $.ajax({
+                        type: "GET",
+                        url: "/action",
+                        data: { motorX: pos.x, motorY: pos.y } }) },
+                endEvent: function(pos) { console.log('motor:' + pos.y) }
+            });
+            $('#pan_tilt_stick').joystick({
+                xSnap: true,
+                ySnap: true,
+                moveEvent: function(pos) { console.log('pan/tilt:' + pos.x) },
+                endEvent: function(pos) { console.log('pan/tilt:' + pos.x) }
+            });
+            
+            $('#motor_stick').joystick('value', 0.5, 0.5);
+            $('#pan_tilt_stick').joystick('value', 0.5, 0.5);
+        }); 
+    </script>
+
+  </head>
+
+  <body>
+    <div class="container thin">
+      <div class="page-header">
+      <h1>Pi Robot</h1>
+    </div>
+
+    <div class="container thin">
+      <p><img src="http://192.168.42.1:8080/?action=stream"/></p>
+      <form id="move" action="/action" method="get">
+        <div class="input-group">
+          <span class="input-group-addon">Seconds to move for</span>
+          <input type="text" name="seconds" class="form-control" value="2">
+        </div>
+        <p></p>
+        <div class="btn-group">
+          <button type="submit" name="direction" value="Forwards" class="btn btn-default">Forwards</button>
+          <button type="submit" name="direction" value="Backwards" class="btn btn-default">Backwards</button>
+          <button type="submit" name="direction" value="Left" class="btn btn-default">Left</button>
+          <button type="submit" name="direction" value="Right" class="btn btn-default">Right</button>
+          <button type="submit" name="direction" value="Stop" class="btn btn-default">Stop</button>
+        </div>
+      </div>
+    </form>
+    
+    <div>Throttle</div>
+    <div class="joystick" id="motor_stick">
+        <div class="handle"></div>
+    </div>
+
+    <div>Yaw</div>
+    <div class="joystick" id="pan_tilt_stick">
+        <div class="handle"></div>
+    </div>
+
+  </body>
+</html>
