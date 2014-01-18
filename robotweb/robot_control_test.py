@@ -9,13 +9,13 @@ print "connected =", connected
 
 if connected:
     
-    miniDriver.setOutputs( 50, 50, 90, 150 )
+    miniDriver.setOutputs( 50, 50, 30, 150 )
     time.sleep( 1.0 )
     
     miniDriver.setOutputs( -50, -50, 90, 30 )
     time.sleep( 1.0 )
     
-    miniDriver.setOutputs( 50, 50, 90, 150 )
+    miniDriver.setOutputs( 50, 50, 150, 150 )
     time.sleep( 1.0 )
     
     miniDriver.setOutputs( -50, -50, 90, 90 )

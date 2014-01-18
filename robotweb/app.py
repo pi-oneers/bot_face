@@ -3,14 +3,21 @@ import Pyro.core
 from cgi import parse_qs
 
 JOYSTICK_DEAD_ZONE = 0.2
+LOG_FILENAME = "/home/robotweb/log.txt"
 
 def application( environ, start_response ):
+
+    #logFile = open( LOG_FILENAME, "a" )
 
     # Connect to Pyro
     robotControl = Pyro.core.getProxyForURI( "PYRONAME://robot_control_server" )
 
+    #print >>logFile, "robotControl =", robotControl
+
     messageHandled = False
     parameters = parse_qs( environ['QUERY_STRING'] )
+
+    #print >>logFile, "parameters =", parameters
 
     if 'motorJoystickX' in parameters and 'motorJoystickY' in parameters:
         
@@ -32,9 +39,9 @@ def application( environ, start_response ):
             motorJoystickX /= stickVectorLength
             motorJoystickY /= stickVectorLength
         
-        if motorJoystickX < JOYSTICK_DEAD_ZONE:
+        if abs( motorJoystickX ) < JOYSTICK_DEAD_ZONE:
             motorJoystickX = 0.0
-        if motorJoystickY < JOYSTICK_DEAD_ZONE:
+        if abs( motorJoystickY ) < JOYSTICK_DEAD_ZONE:
             motorJoystickY = 0.0
             
         # Set forward speed from motorJoystickY
@@ -46,6 +53,7 @@ def application( environ, start_response ):
         leftMotorSpeed += maxAbsMotorSpeed*motorJoystickX
         rightMotorSpeed -= maxAbsMotorSpeed*motorJoystickX
         
+        #print >>logFile, "Setting motor speeds", leftMotorSpeed, rightMotorSpeed
         robotControl.setMotorSpeeds( leftMotorSpeed, rightMotorSpeed )
         messageHandled = True
      
@@ -55,6 +63,8 @@ def application( environ, start_response ):
     else:
         status = '400 Bad Request'
     
+    #logFile.close()
+
     response_headers = [('Content-type', 'text/plain'),
                         ('Content-Length', str(len(status)))]
     start_response(status, response_headers)

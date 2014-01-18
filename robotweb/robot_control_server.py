@@ -11,7 +11,7 @@ import mini_driver
 class UpdateProcess( multiprocessing.Process ):
 
     #-----------------------------------------------------------------------------------------------
-    def __init__( self, robotControl, updateRateHz=50.0 ):
+    def __init__( self, robotControl, updateRateHz=0.5 ):
         
         multiprocessing.Process.__init__( self )
         self.robotControl = robotControl
@@ -36,21 +36,24 @@ class UpdateProcess( multiprocessing.Process ):
             
             loopStartTime = time.time()
             
-            self.robotControl.miniDriver.setOutputs(
-                self.robotControl.leftMotorSpeed,
-                self.robotControl.rightMotorSpeed,
-                self.robotControl.panAngle,
-                self.robotControl.tiltAngle )
+            #print "Sending", self.robotControl.leftMotorSpeed, self.robotControl.rightMotorSpeed
+
+            #self.robotControl.miniDriver.setOutputs(
+            #    self.robotControl.leftMotorSpeed,
+            #    self.robotControl.rightMotorSpeed,
+            #    self.robotControl.panAngle,
+            #    self.robotControl.tiltAngle )
                 
             maxLoopTime = 1.0/self.updateRateHz
             sleepTime = maxLoopTime - (time.time() - loopStartTime)
+            print sleepTime
             if sleepTime > 0.0:
-                time.sleep( 0.0 )
+                time.sleep( sleepTime )
 
 #---------------------------------------------------------------------------------------------------
 class RobotControl( Pyro.core.ObjBase ):
 
-    MAX_ABS_MOTOR_SPEED = 50
+    MAX_ABS_MOTOR_SPEED = 30
 
     #-----------------------------------------------------------------------------------------------
     def __init__( self ):
@@ -63,11 +66,18 @@ class RobotControl( Pyro.core.ObjBase ):
         
         self.leftMotorSpeed = 0
         self.rightMotorSpeed = 0
-        self.panAngle = 90
+        self.panAngle = 70
         self.tiltAngle = 90
         
-        self.updateProcess = UpdateProcess( self )
-        self.updateProcess.start()
+        self.miniDriver.setOutputs(
+                self.leftMotorSpeed,
+                self.rightMotorSpeed,
+                self.panAngle,
+                self.tiltAngle )
+        
+        self.updateProcess = None
+        #self.updateProcess = UpdateProcess( self )
+        #self.updateProcess.start()
     
     #-----------------------------------------------------------------------------------------------
     def __del__( self ):
@@ -87,6 +97,14 @@ class RobotControl( Pyro.core.ObjBase ):
         absLimit = self.getMaxAbsMotorSpeed()
         self.leftMotorSpeed = max( -absLimit, min( leftMotorSpeed, absLimit ) )
         self.rightMotorSpeed = max( -absLimit, min( rightMotorSpeed, absLimit ) )
+
+        print "Set motor speed", leftMotorSpeed, rightMotorSpeed , self.leftMotorSpeed, self.rightMotorSpeed
+
+        self.miniDriver.setOutputs(
+                self.leftMotorSpeed,
+                self.rightMotorSpeed,
+                self.panAngle,
+                self.tiltAngle )
     
     #-----------------------------------------------------------------------------------------------
     def setNeckAngles( self, panAngle, tiltAngle ):       

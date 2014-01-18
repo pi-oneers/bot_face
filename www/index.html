@@ -35,26 +35,26 @@
     <script src="js/jquery.form.js"></script>
     <script src="js/bootstrap.min.js"></script>
     <script src="js/jquery.joystick.js"></script>
+    <script src="js/sockjs-0.3.min.js"></script>
     
     <script>
         $(document).ready(function() { 
-            $('#move').ajaxForm();
-            
+        
+            socket = new SockJS("http://" + window.location.hostname + ":8081/robot_control");
+        
+            $("#camera").attr( "src", "http://" + window.location.hostname + ":8080/?action=stream" );
+  
             $('#motor_stick').joystick({
                 xSnap: true,
                 ySnap: true,
-                moveEvent: function(pos) {
-                    $.ajax({
-                        type: "GET",
-                        url: "/action",
-                        data: { motorX: pos.x, motorY: pos.y } }) },
-                endEvent: function(pos) { console.log('motor:' + pos.y) }
+                moveEvent: function(pos) { socket.send( "Move " + 2.0*(pos.x - 0.5) + " " + 2.0*(pos.y - 0.5) ) },
+                endEvent: function(pos) { socket.send( "Move " + 2.0*(pos.x - 0.5) + " " + 2.0*(pos.y - 0.5) ) }
             });
             $('#pan_tilt_stick').joystick({
                 xSnap: true,
                 ySnap: true,
-                moveEvent: function(pos) { console.log('pan/tilt:' + pos.x) },
-                endEvent: function(pos) { console.log('pan/tilt:' + pos.x) }
+                moveEvent: function(pos) { socket.send( "PanTilt " + 2.0*(pos.x - 0.5) + " " + 2.0*(pos.y - 0.5) ) },
+                endEvent: function(pos) { socket.send( "PanTilt " + 2.0*(pos.x - 0.5) + " " + 2.0*(pos.y - 0.5) ) }
             });
             
             $('#motor_stick').joystick('value', 0.5, 0.5);
@@ -71,32 +71,17 @@
     </div>
 
     <div class="container thin">
-      <p><img src="http://192.168.42.1:8080/?action=stream"/></p>
-      <form id="move" action="/action" method="get">
-        <div class="input-group">
-          <span class="input-group-addon">Seconds to move for</span>
-          <input type="text" name="seconds" class="form-control" value="2">
-        </div>
-        <p></p>
-        <div class="btn-group">
-          <button type="submit" name="direction" value="Forwards" class="btn btn-default">Forwards</button>
-          <button type="submit" name="direction" value="Backwards" class="btn btn-default">Backwards</button>
-          <button type="submit" name="direction" value="Left" class="btn btn-default">Left</button>
-          <button type="submit" name="direction" value="Right" class="btn btn-default">Right</button>
-          <button type="submit" name="direction" value="Stop" class="btn btn-default">Stop</button>
-        </div>
-      </div>
-    </form>
+      <p><img id="camera" src=""/></p>
     
-    <div>Throttle</div>
-    <div class="joystick" id="motor_stick">
+      <div class="joystick" id="motor_stick">
         <div class="handle"></div>
-    </div>
-
-    <div>Yaw</div>
-    <div class="joystick" id="pan_tilt_stick">
+      </div>
+    
+      <div class="joystick" id="pan_tilt_stick">
         <div class="handle"></div>
+      </div>
+    
     </div>
-
+    
   </body>
 </html>

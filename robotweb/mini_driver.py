@@ -86,7 +86,7 @@ class SerialReadProcess( multiprocessing.Process ):
                 newBytes = self.serialPort.read( numBytesAvailable )
                 self.serialBuffer += newBytes
 
-                print "---> Got", newBytes
+                #print "---> Got", newBytes
                 
                 # Check to see if we've received a message
                 msgStartPos = self.serialBuffer.find( MESSAGE_MARKER )
@@ -216,6 +216,8 @@ class Connection():
             + chr( 0 )
         msgBuffer = msgBuffer[ :-1 ] + chr( calculateCheckSum( msgBuffer ) )
         
+        #print "Setting outputs", leftMotorSpeed, rightMotorSpeed
+
         self.serialPort.write( msgBuffer )
     
 #---------------------------------------------------------------------------------------------------
@@ -291,13 +293,13 @@ class MiniDriver():
         
         SIGNED_TO_UNSIGNED_OFFSET = 128
         
-        leftMotorSpeed = max( -self.MAX_ABS_MOTOR_SPEED, min( leftMotorSpeed, self.MAX_ABS_MOTOR_SPEED ) )
+        leftMotorSpeed = max( -self.MAX_ABS_MOTOR_SPEED, min( int( leftMotorSpeed ), self.MAX_ABS_MOTOR_SPEED ) )
         leftMotorSpeed += SIGNED_TO_UNSIGNED_OFFSET
-        rightMotorSpeed = max( -self.MAX_ABS_MOTOR_SPEED, min( rightMotorSpeed, self.MAX_ABS_MOTOR_SPEED ) )
+        rightMotorSpeed = max( -self.MAX_ABS_MOTOR_SPEED, min( int( rightMotorSpeed ), self.MAX_ABS_MOTOR_SPEED ) )
         rightMotorSpeed += SIGNED_TO_UNSIGNED_OFFSET
         
-        panAngle = max( 0, min( panAngle, 180 ) )
-        tiltAngle = max( 0, min( tiltAngle, 180 ) )
+        panAngle = max( 0, min( int( panAngle ), 180 ) )
+        tiltAngle = max( 0, min( int( tiltAngle ), 180 ) )
         
         if self.connection != None:
             self.connection.setOutputs( leftMotorSpeed, rightMotorSpeed, panAngle, tiltAngle )
