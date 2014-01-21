@@ -12,6 +12,8 @@ COMMAND_ID_WRITE_DB_ENTRY = 2
 
 COMMAND_ID_GET_FIRMWARE_INFO = 1
 COMMAND_ID_SET_OUTPUTS = 2
+COMMAND_ID_SET_PAN_SERVO_LIMITS = 3
+COMMAND_ID_SET_TILT_SERVO_LIMITS = 4
 
 RESPONSE_ID_FIRMWARE_INFO = 1
 RESPONSE_ID_INVALID_COMMAND = 2
@@ -219,6 +221,30 @@ class Connection():
         #print "Setting outputs", leftMotorSpeed, rightMotorSpeed
 
         self.serialPort.write( msgBuffer )
+        
+    #-----------------------------------------------------------------------------------------------
+    def setPanServoLimits( self, servoMin, servoMax ):
+        
+        msgBuffer = MESSAGE_MARKER + chr( COMMAND_ID_SET_PAN_SERVO_LIMITS) \
+            + chr( 9 ) \
+            + chr( (servoMin >> 8) & 0xFF ) + chr( servoMin & 0xFF ) \
+            + chr( (servoMax >> 8) & 0xFF ) + chr( servoMax & 0xFF ) \
+            + chr( 0 )
+        msgBuffer = msgBuffer[ :-1 ] + chr( calculateCheckSum( msgBuffer ) )
+
+        self.serialPort.write( msgBuffer )
+        
+    #-----------------------------------------------------------------------------------------------
+    def setTiltServoLimits( self, servoMin, servoMax ):
+        
+        msgBuffer = MESSAGE_MARKER + chr( COMMAND_ID_SET_TILT_SERVO_LIMITS) \
+            + chr( 9 ) \
+            + chr( (servoMin >> 8) & 0xFF ) + chr( servoMin & 0xFF ) \
+            + chr( (servoMax >> 8) & 0xFF ) + chr( servoMax & 0xFF ) \
+            + chr( 0 )
+        msgBuffer = msgBuffer[ :-1 ] + chr( calculateCheckSum( msgBuffer ) )
+
+        self.serialPort.write( msgBuffer )
     
 #---------------------------------------------------------------------------------------------------
 class MiniDriver():
@@ -231,6 +257,8 @@ class MiniDriver():
     EXPECTED_FIRMWARE_INFO = FirmwareInfo( 0xAC, 0xED, 0, 1 )
     
     MAX_ABS_MOTOR_SPEED = 100
+    MIN_PULSE_WIDTH = 200
+    MAX_PULSE_WIDTH = 2800
     
     #-----------------------------------------------------------------------------------------------
     def __init__( self ):
@@ -303,6 +331,24 @@ class MiniDriver():
         
         if self.connection != None:
             self.connection.setOutputs( leftMotorSpeed, rightMotorSpeed, panAngle, tiltAngle )
+            
+    #-----------------------------------------------------------------------------------------------
+    def setPanServoLimits( self, servoMin, servoMax ):
+     
+        servoMin = max( self.MIN_PULSE_WIDTH, min( int( servoMin ), self.MAX_PULSE_WIDTH ) )
+        servoMax = max( self.MIN_PULSE_WIDTH, min( int( servoMax ), self.MAX_PULSE_WIDTH ) )
+        
+        if self.connection != None:
+            self.connection.setPanServoLimits( servoMin, servoMax )
+            
+    #-----------------------------------------------------------------------------------------------
+    def setTiltServoLimits( self, servoMin, servoMax ):
+     
+        servoMin = max( self.MIN_PULSE_WIDTH, min( int( servoMin ), self.MAX_PULSE_WIDTH ) )
+        servoMax = max( self.MIN_PULSE_WIDTH, min( int( servoMax ), self.MAX_PULSE_WIDTH ) )
+        
+        if self.connection != None:
+            self.connection.setTiltServoLimits( servoMin, servoMax )
     
     #-----------------------------------------------------------------------------------------------
     def __getFirmwareDir( self ):

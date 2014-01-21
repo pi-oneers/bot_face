@@ -87,11 +87,15 @@ def upload( sketchDir, serialPortName=DEFAULT_SERIAL_PORT_NAME,
         
         hexFilename = inoUploaderSketchDir + "/.build/{0}/firmware.hex".format( boardModel )
         
+        print "Trying to upload", boardModel
+        
         uploadResult = subprocess.call( [ "avrdude", 
             "-p", boardInfo.processor,
             "-P", serialPortName, "-c", "arduino", "-b", str( boardInfo.uploadSpeed ), 
             "-D", "-U", "flash:w:{0}:i".format( hexFilename ) ] )
 
+        print "uploadResult", uploadResult
+            
         if uploadResult == 0:
             uploadSucceeded = True
     

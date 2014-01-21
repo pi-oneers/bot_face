@@ -7,19 +7,25 @@
     <title>Pi Robot</title>
 
     <link href="/css/bootstrap.css" rel="stylesheet">
-
-    <style>
-      .thin.container {
-        max-width:700px;
-      }
-    </style>
     
     <style type="text/css">
         .joystick {
             position: relative;
-            width: 130px;
-            height: 130px;
-            background-color: #eee;
+            width: 230px;
+            height: 230px;
+            -webkit-border-radius: 100%;
+            -moz-border-radius: 100%;
+            border-radius: 100%; 
+            /*background-color: #eee;*/
+        }
+        .joystick .inner_circle {
+            position: absolute;
+            width: 100px;
+            height: 100px;
+            -webkit-border-radius: 100%;
+            -moz-border-radius: 100%;
+            border-radius: 100%; 
+            background-color: #ccc;
         }
         .joystick .handle {
             position: absolute;
@@ -28,6 +34,24 @@
             background-color: rgb(201, 44, 44);
             border: 1px solid rgb(107, 35, 35);
             border-radius: 5px;
+        }
+        
+        #camera {
+            display: block;
+            margin-left: auto;
+            margin-right: auto;
+        }
+        
+        #motor_stick {
+            position: fixed;
+            top: 200px;
+            left: -30px;
+        }
+        
+        #pan_tilt_stick {
+            position: fixed;
+            top: 200px;
+            left: 400px;
         }
     </style>
     
@@ -38,49 +62,94 @@
     <script src="js/sockjs-0.3.min.js"></script>
     
     <script>
+        function layoutControls() {
+        
+            var motorStick = $('#motor_stick');
+            var panTiltStick = $('#pan_tilt_stick');
+            var cameraImage = $('#camera');
+        
+            console.log( screen.width + " " + screen.height );
+        
+            if ( screen.width > screen.height )
+            {
+                // In landscape mode
+                motorStick.css( 'left', 0.1*screen.width - motorStick.width()/2 );
+                motorStick.css( 'top', 0.5*screen.height - motorStick.height()/2 );
+                panTiltStick.css( 'left', 0.9*screen.width - panTiltStick.width()/2 );
+                panTiltStick.css( 'top', 0.5*screen.height - panTiltStick.height()/2 );
+            }
+            else
+            {
+                // In portrait mode
+                motorStick.css( 'left', 0.2*screen.width - motorStick.width()/2 );
+                motorStick.css( 'top', 0.7*screen.height - motorStick.height()/2 );
+                panTiltStick.css( 'left', 0.8*screen.width - panTiltStick.width()/2 );
+                panTiltStick.css( 'top', 0.7*screen.height - panTiltStick.height()/2 );
+            }
+            
+            cameraImage.css( 'max-width', screen.width );
+        }
+    
+        $( window ).on( "orientationchange", function() {
+            setTimeout( layoutControls, 300 ); } );
+    
         $(document).ready(function() { 
         
-            socket = new SockJS("http://" + window.location.hostname + ":8081/robot_control");
-        
-            $("#camera").attr( "src", "http://" + window.location.hostname + ":8080/?action=stream" );
-  
-            $('#motor_stick').joystick({
-                xSnap: true,
-                ySnap: true,
-                moveEvent: function(pos) { socket.send( "Move " + 2.0*(pos.x - 0.5) + " " + 2.0*(pos.y - 0.5) ) },
-                endEvent: function(pos) { socket.send( "Move " + 2.0*(pos.x - 0.5) + " " + 2.0*(pos.y - 0.5) ) }
-            });
-            $('#pan_tilt_stick').joystick({
-                xSnap: true,
-                ySnap: true,
-                moveEvent: function(pos) { socket.send( "PanTilt " + 2.0*(pos.x - 0.5) + " " + 2.0*(pos.y - 0.5) ) },
-                endEvent: function(pos) { socket.send( "PanTilt " + 2.0*(pos.x - 0.5) + " " + 2.0*(pos.y - 0.5) ) }
-            });
+             webSocktURL = "http://" + window.location.hostname + "/robot_control";
+             cameraURL = "http://" + window.location.hostname + ":8080/?action=stream";
+             socket = new SockJS( webSocktURL );
+         
+             $("#camera").attr( "src", cameraURL );
+   
+             $('#motor_stick').joystick({
+                 xSnap: true,
+                 ySnap: true,
+                 moveEvent: function(pos) { 
+                    if ( socket.readyState == SockJS.OPEN ) {
+                        socket.send( "Move " + pos.x + " " + pos.y ); } },
+                 endEvent: function(pos) { 
+                    if ( socket.readyState == SockJS.OPEN ) {
+                        socket.send( "Move " + pos.x + " " + pos.y ); } }
+             });
+             $('#pan_tilt_stick').joystick({
+                 xSnap: true,
+                 ySnap: true,
+                 moveEvent: function(pos) { 
+                    if ( socket.readyState == SockJS.OPEN ) {
+                        socket.send( "PanTilt " + pos.x + " " + pos.y ); } },
+                 endEvent: function(pos) { 
+                    if ( socket.readyState == SockJS.OPEN ) {
+                        socket.send( "PanTilt " + pos.x + " " + pos.y ); } }
+             });
+             $('#motor_stick').joystick( 'value', 0.0, 0.0 );
+             $('#pan_tilt_stick').joystick( 'value', 0.0, 0.0 );
             
-            $('#motor_stick').joystick('value', 0.5, 0.5);
-            $('#pan_tilt_stick').joystick('value', 0.5, 0.5);
+            // Add a periodic function to keep the camera and socket alive
+            setInterval( function() { 
+                if ( socket.readyState == SockJS.OPEN ) {
+                    socket.send( "StartStreaming" );
+                    $("#camera").attr( "src", cameraURL );
+                } else {
+                    socket = new SockJS( webSocktURL );
+                } }, 1000 );
+            
+            layoutControls();
         }); 
     </script>
 
   </head>
 
   <body>
-    <div class="container thin">
-      <div class="page-header">
-      <h1>Pi Robot</h1>
+    <p><img id="camera" src=""/></p>
+    
+    <div class="joystick" id="motor_stick">
+      <div class="inner_circle"></div>
+      <div class="handle"></div>
     </div>
-
-    <div class="container thin">
-      <p><img id="camera" src=""/></p>
     
-      <div class="joystick" id="motor_stick">
-        <div class="handle"></div>
-      </div>
-    
-      <div class="joystick" id="pan_tilt_stick">
-        <div class="handle"></div>
-      </div>
-    
+    <div class="joystick" id="pan_tilt_stick">
+      <div class="inner_circle"></div>
+      <div class="handle"></div>
     </div>
     
   </body>

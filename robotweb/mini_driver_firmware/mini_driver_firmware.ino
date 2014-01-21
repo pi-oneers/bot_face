@@ -3,7 +3,7 @@
 
 //------------------------------------------------------------------------------
 const uint8_t VERSION_MAJOR = 0;
-const uint8_t VERSION_MINOR = 25;
+const uint8_t VERSION_MINOR = 27;
 const uint16_t FIRMWARE_ID = 0xACED;
 
 const uint16_t MAX_MSG_SIZE = 16;
@@ -14,6 +14,8 @@ const uint16_t MSG_HEADER_SIZE = 2 + 1 + 1; // Start bytes + Id + size
 
 const uint8_t COMMAND_ID_GET_FIRMWARE_INFO = 1;
 const uint8_t COMMAND_ID_SET_OUTPUTS = 2;
+const uint8_t COMMAND_ID_SET_PAN_SERVO_LIMITS = 3;
+const uint8_t COMMAND_ID_SET_TILT_SERVO_LIMITS = 4;
 
 const uint8_t RESPONSE_ID_FIRMWARE_INFO = 1;
 const uint8_t RESPONSE_ID_INVALID_COMMAND = 2;
@@ -216,14 +218,39 @@ void processMessage()
                 gLeftMotorDirection = ( leftMotorSpeed >= 0 ? eMD_Forwards : eMD_Backwards );
                 gRightMotorDirection = ( rightMotorSpeed >= 0 ? eMD_Forwards : eMD_Backwards );
                 gLeftMotorDutyCycle = constrain( abs( leftMotorSpeed ), 0, 100 );
-                gRightMotorDutyCycle = constrain( abs( leftMotorSpeed ), 0, 100 );
+                gRightMotorDutyCycle = constrain( abs( rightMotorSpeed ), 0, 100 );
                 gLastCommandTime = millis();
-            
-                Serial.println( gPanServoAngle );
             
                 bCommandHandled = true;
             }
         
+            break;
+        }
+        case COMMAND_ID_SET_PAN_SERVO_LIMITS:
+        case COMMAND_ID_SET_TILT_SERVO_LIMITS:
+        {
+            if ( getMessageSize() == 9 )
+            {
+                uint16_t servoMin = gMsgBuffer[ 4 ] << 8 | gMsgBuffer[ 5 ];
+                uint16_t servoMax = gMsgBuffer[ 6 ] << 8 | gMsgBuffer[ 7 ];
+                
+                if ( getMessageId() == COMMAND_ID_SET_PAN_SERVO_LIMITS )
+                {
+                    int curAngle = gPanServo.read();
+                    gPanServo.detach();
+                    gPanServo.attach( PAN_SERVO_PIN, servoMin, servoMax );
+                    gPanServo.write( curAngle );
+                }
+                else
+                {
+                    int curAngle = gTiltServo.read();
+                    gTiltServo.detach();
+                    gTiltServo.attach( TILT_SERVO_PIN, servoMin, servoMax );
+                    gTiltServo.write( curAngle );
+                }
+                
+                bCommandHandled = true;
+            }
             break;
         }
     }
