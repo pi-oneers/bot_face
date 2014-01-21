@@ -1,0 +1,3 @@
+All code copyright Dawn Robotics Ltd is licensed under the BSD license. See the LICENSE file for details.
+
+Of the included JavaScript libraries, jQuery and SockJS are licensed under the MIT license. Our joystick class jquery.joystick.js is a modified version of https://github.com/mifi/jquery-joystick. This project doesn't have a license but obviously all derived projects should link back and provide acknowledgement.
