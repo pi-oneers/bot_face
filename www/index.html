@@ -115,7 +115,13 @@
                         socket.send( "PanTilt " + pos.x + " " + pos.y ); } },
                  endEvent: function(pos) { 
                     if ( socket.readyState == SockJS.OPEN ) {
-                        socket.send( "PanTilt " + pos.x + " " + pos.y ); } }
+                        socket.send( "PanTilt " + pos.x + " " + pos.y ); } },
+                 clickEvent: function(clickPos) { 
+                    if ( socket.readyState == SockJS.OPEN 
+                        && Math.abs( clickPos.x ) < 20 && Math.abs( clickPos.y ) < 20 ) 
+                    {
+                        socket.send( "Centre" ); 
+                    } }
              });
              $('#motor_stick').joystick( 'value', 0.0, 0.0 );
              $('#pan_tilt_stick').joystick( 'value', 0.0, 0.0 );

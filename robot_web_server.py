@@ -31,11 +31,13 @@
 import os.path
 import math
 import time
+import signal
 import tornado.httpserver
 import tornado.ioloop
 import tornado.web
 import sockjs.tornado
-import multiprocessing
+import threading
+import Queue
 import mini_driver
 import camera_streamer
 
@@ -43,9 +45,13 @@ JOYSTICK_DEAD_ZONE = 0.1
 MAX_ABS_MOTOR_SPEED = 30.0
 MAX_ABS_NECK_SPEED = 20.0    # Degrees per second
 
-commandQueue = None
+robot = None
+
+cameraStreamer = None
 scriptPath = os.path.dirname( __file__ )
 webPath = os.path.abspath( scriptPath + "/www" )
+robotConnectionResultQueue = Queue.Queue()
+isClosing = False
 
 #--------------------------------------------------------------------------------------------------- 
 class Robot:
@@ -65,7 +71,7 @@ class Robot:
         if not connected:
             raise Exception( "Unable to connect to the mini driver" )
         
-        self.commandQueue = multiprocessing.Queue()
+        self.commandQueue = Queue.Queue()
         
         self.panPulseWidthMin = 700
         self.panPulseWidthMax = 2100
@@ -82,9 +88,22 @@ class Robot:
         
         self.lastServoSettingsSendTime = 0.0
         self.lastUpdateTime = 0.0
+    
+    #-----------------------------------------------------------------------------------------------
+    def __del__( self ):
         
+        self.disconnect()
+    
+    #-----------------------------------------------------------------------------------------------
+    def disconnect( self ):
+        
+        self.miniDriver.disconnect()
+    
     #-----------------------------------------------------------------------------------------------
     def update( self ):
+        
+        if not self.miniDriver.isConnected():
+            return
         
         curTime = time.time()
         timeDiff = min( curTime - self.lastUpdateTime, self.MAX_TIME_DIFF )
@@ -129,24 +148,28 @@ class Robot:
             self.miniDriver.setTiltServoLimits( self.tiltPulseWidthMin, self.tiltPulseWidthMax )
  
             self.lastServoSettingsSendTime = curTime
- 
+
+#--------------------------------------------------------------------------------------------------- 
+def createRobot( resultQueue ):
+    
+    r = Robot()
+    resultQueue.put( r )
+            
 #--------------------------------------------------------------------------------------------------- 
 class ConnectionHandler( sockjs.tornado.SockJSConnection ):
     
     #-----------------------------------------------------------------------------------------------
     def on_open( self, info ):
-        print "Got cQ", commandQueue
-        self.commandQueue = commandQueue
+        
+        pass
         
     #-----------------------------------------------------------------------------------------------
     def on_message( self, message ):
-        
-        #print "Got", message
-        
+                
         try:
             message = str( message )
         except Exception:
-            print "failed"
+            print "Got a message that couldn't be converted to a string"
             return
         
         if isinstance( message, str ):
@@ -156,11 +179,11 @@ class ConnectionHandler( sockjs.tornado.SockJSConnection ):
                 
                 if lineData[ 0 ] == "Centre":
                 
-                    self.commandQueue.put( [ "c" ] )
+                    if robot != None:
+                        robot.commandQueue.put( [ "c" ] )
                 
                 elif lineData[ 0 ] == "StartStreaming":
                     
-                    global cameraStreamer
                     cameraStreamer.startStreaming()
                 
                 elif lineData[ 0 ] == "Move" and len( lineData ) >= 3:
@@ -181,7 +204,8 @@ class ConnectionHandler( sockjs.tornado.SockJSConnection ):
                     
                     print motorJoystickX, motorJoystickY, leftMotorSpeed, rightMotorSpeed
                     
-                    self.commandQueue.put( [ "m", leftMotorSpeed, rightMotorSpeed ] )
+                    if robot != None:
+                        robot.commandQueue.put( [ "m", leftMotorSpeed, rightMotorSpeed ] )
                     
                 elif lineData[ 0 ] == "PanTilt" and len( lineData ) >= 3:
                     
@@ -192,7 +216,8 @@ class ConnectionHandler( sockjs.tornado.SockJSConnection ):
                     panSpeed = -MAX_ABS_NECK_SPEED*neckJoystickX
                     tiltSpeed = -MAX_ABS_NECK_SPEED*neckJoystickY
                     
-                    self.commandQueue.put( [ "l", panSpeed, tiltSpeed ] )
+                    if robot != None:
+                        robot.commandQueue.put( [ "l", panSpeed, tiltSpeed ] )
 
     #-----------------------------------------------------------------------------------------------
     def on_close(self):
@@ -233,29 +258,62 @@ class MainHandler( tornado.web.RequestHandler ):
         self.render( webPath + "/index.html" )
         
 #--------------------------------------------------------------------------------------------------- 
-robot = Robot()
-cameraStreamer = camera_streamer.CameraStreamer()
-commandQueue = robot.commandQueue
-
-router = sockjs.tornado.SockJSRouter( 
-    ConnectionHandler, '/robot_control' ) #, { "commandQueue" : robot.commandQueue } )
-application = tornado.web.Application( [ 
-    ( r"/", MainHandler ), 
-    ( r"/css/(.*)", tornado.web.StaticFileHandler, { "path": webPath + "/css" } ),
-    ( r"/fonts/(.*)", tornado.web.StaticFileHandler, { "path": webPath + "/fonts" } ),
-    ( r"/js/(.*)", tornado.web.StaticFileHandler, { "path": webPath + "/js" } ) ] \
-    + router.urls ) #,
-    #template_path=webPath, static_path=webPath )
+def robotUpdate():
     
-    #( r"/(.*)", tornado.web.StaticFileHandler, {"path": scriptPath + "/www" } ) ] \
- 
+    global robot
+    global isClosing
+    
+    if isClosing:
+        tornado.ioloop.IOLoop.instance().stop()
+        return
+        
+    if robot == None:
+        
+        if not robotConnectionResultQueue.empty():
+            
+            robot = robotConnectionResultQueue.get()
+        
+    else:
+                
+        robot.update()
+
+#--------------------------------------------------------------------------------------------------- 
+def sigintHandler( signum, frame ):
+    global isClosing
+    isClosing = True
+        
 #--------------------------------------------------------------------------------------------------- 
 if __name__ == "__main__":
-    http_server = tornado.httpserver.HTTPServer(application)
+    
+    signal.signal( signal.SIGINT, sigintHandler )
+    
+    # Create the configuration for the web server
+    router = sockjs.tornado.SockJSRouter( 
+        ConnectionHandler, '/robot_control' )
+    application = tornado.web.Application( [ 
+        ( r"/", MainHandler ), 
+        ( r"/css/(.*)", tornado.web.StaticFileHandler, { "path": webPath + "/css" } ),
+        ( r"/fonts/(.*)", tornado.web.StaticFileHandler, { "path": webPath + "/fonts" } ),
+        ( r"/js/(.*)", tornado.web.StaticFileHandler, { "path": webPath + "/js" } ) ] \
+        + router.urls )
+    
+    #( r"/(.*)", tornado.web.StaticFileHandler, {"path": scriptPath + "/www" } ) ] \
+    
+    # Create a camera streamer
+    cameraStreamer = camera_streamer.CameraStreamer()
+    
+    # Start connecting to the robot asyncronously
+    robotConnectionThread = threading.Thread( target=createRobot, 
+        args=[ robotConnectionResultQueue ] )
+    robotConnectionThread.start()
+
+    # Now start the web server
+    print "Starting web server..."
+    http_server = tornado.httpserver.HTTPServer( application )
     http_server.listen( 80 )
     
     robotPeriodicCallback = tornado.ioloop.PeriodicCallback( 
-        robot.update, 100, io_loop=tornado.ioloop.IOLoop.instance() )
+        robotUpdate, 100, io_loop=tornado.ioloop.IOLoop.instance() )
     robotPeriodicCallback.start()
     
     cameraStreamerPeriodicCallback = tornado.ioloop.PeriodicCallback( 
@@ -263,3 +321,13 @@ if __name__ == "__main__":
     cameraStreamerPeriodicCallback.start()
     
     tornado.ioloop.IOLoop.instance().start()
+    
+    # Shur down code
+    robotConnectionThread.join()
+    
+    if robot != None:
+        robot.disconnect()
+    else:
+        if not robotConnectionResultQueue.empty():
+            robot = robotConnectionResultQueue.get()
+            robot.disconnect()

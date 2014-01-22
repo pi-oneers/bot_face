@@ -50,6 +50,7 @@
                 ySnap: false,
                 moveEvent: function() {},
                 endEvent: function() {},
+                clickEvent: function() {},
             }, val);
 
             this.data('joystick-options', options);
@@ -134,6 +135,27 @@
 
                         $joystick.data('joystick-options').moveEvent.call($joystick[0], getValue.call(this));
                     }
+                });
+                
+                $joystick.on('click', function(e) {
+                    
+                    var $joystick = $(this);
+                    var $innerCircle = $(this).children('.inner_circle');
+                
+                    var innerCircleRadius = $innerCircle.width()/2;
+                    var innerCircleLeft = $joystick.width()/2 - $innerCircle.width()/2;
+                    var innerCircleTop = $joystick.height()/2 - $innerCircle.height()/2;
+                    var innerCircleCentreX = innerCircleLeft + innerCircleRadius;
+                    var innerCircleCentreY = innerCircleTop + innerCircleRadius;
+                    
+                    pageX = e.pageX;
+                    pageY = e.pageY;
+                    var x = pageX - ($joystick.offset().left + innerCircleCentreX);
+                    var y = pageY - ($joystick.offset().top + innerCircleCentreY);
+                    
+                    // Pass the position of the click relative to the joystick centre
+                    // to the clickEvent
+                    $joystick.data('joystick-options').clickEvent.call($joystick[0], {x: x, y: y});
                 });
             });
         }

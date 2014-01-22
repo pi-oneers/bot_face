@@ -29,8 +29,9 @@
 import os.path
 import re
 import serial
-import multiprocessing
+import threading
 import time
+import Queue
 
 import ino_uploader
 
@@ -85,17 +86,17 @@ def calculateCheckSum( msgBuffer ):
     return ~checkSum & 0xFF
 
 #---------------------------------------------------------------------------------------------------
-class SerialReadProcess( multiprocessing.Process ):
+class SerialReadProcess( threading.Thread ):
 
     #-----------------------------------------------------------------------------------------------
     def __init__( self, serialPort, responseQueue ):
         
-        multiprocessing.Process.__init__( self )
+        threading.Thread.__init__( self )
         self.serialPort = serialPort
         self.responseQueue = responseQueue
         self.serialBuffer = ""
         
-        self.stopEvent = multiprocessing.Event()
+        self.stopEvent = threading.Event()
 
     #-----------------------------------------------------------------------------------------------
     def stop( self ):
@@ -199,8 +200,7 @@ class Connection():
         
         self.serialPort = serial.Serial( serialPortName, baudRate, timeout=0 )
         
-        self.responseQueue = multiprocessing.Queue()
-    
+        self.responseQueue = Queue.Queue()
         self.serialReadProcess = SerialReadProcess( self.serialPort, self.responseQueue )
         self.serialReadProcess.start()
         
@@ -208,6 +208,11 @@ class Connection():
         
     #-----------------------------------------------------------------------------------------------
     def __del__( self ):
+        
+        self.close()
+        
+    #-----------------------------------------------------------------------------------------------
+    def close( self ):
         
         if self.serialReadProcess != None:
             self.serialReadProcess.stop()
@@ -293,7 +298,12 @@ class MiniDriver():
         
         self.scriptPath = os.path.dirname( __file__ )
         self.connection = None
+    
+    #-----------------------------------------------------------------------------------------------
+    def __del__( self ):
         
+        self.disconnect()
+    
     #-----------------------------------------------------------------------------------------------
     def connect( self ):
         
@@ -309,7 +319,7 @@ class MiniDriver():
         
         if firmwareInfo != self.__getExpectedFirmwareInfo():
             
-            del self.connection
+            self.connection.close()
             self.connection = None
             
             print "Unable to connect to correct firmware, uploading..."
@@ -324,10 +334,17 @@ class MiniDriver():
                 
                 if firmwareInfo != self.__getExpectedFirmwareInfo():
             
-                    del self.connection
+                    self.connection.close()
                     self.connection = None
             
         return self.isConnected()
+    
+    #-----------------------------------------------------------------------------------------------
+    def disconnect( self ):
+        
+        if self.isConnected():
+            self.connection.close()
+            self.connection = None
     
     #-----------------------------------------------------------------------------------------------
     def isConnected( self ):
