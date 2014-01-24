@@ -1,0 +1,108 @@
+<!DOCTYPE html>
+<html lang="en">
+    <head>
+        <meta charset="utf-8">
+        <title>Configuration</title>
+         <!--<link rel="stylesheet" href="http://code.jquery.com/ui/1.10.4/themes/smoothness/jquery-ui.css">
+        <script src="http://code.jquery.com/jquery-1.9.1.js"></script>
+        <script src="http://code.jquery.com/ui/1.10.4/jquery-ui.js"></script>-->
+        
+        <script src="js/jquery.js"></script>
+        <script src="js/sockjs-0.3.min.js"></script>
+        
+        <script>
+        
+        function onSliderChange( slider, socket )
+        {
+            var angle = slider.val();
+
+            if ( slider.attr( "id" ) == "panAngle" )
+            {
+                $( "#panAngleDisplay" ).text( angle );
+            }
+            else if ( slider.attr( "id" ) == "tiltAngle" )
+            {
+                $( "#tiltAngleDisplay" ).text( angle );
+            }
+            
+            if ( socket.readyState == SockJS.OPEN ) 
+            {
+                var panAngle = $( "#panAngle" ).val();
+                var tiltAngle = $( "#tiltAngle" ).val();
+                socket.send( "SetNeckAngles " + panAngle + " " + tiltAngle );
+            }
+        }
+        
+        $(document).ready( function() { 
+        
+            webSocketURL = "http://" + window.location.hostname + "/robot_control";
+            socket = new SockJS( webSocketURL );
+            socket.onmessage = function( e ) {
+                console.log('message', e.data);
+                
+                configData = $.parseJSON( e.data );
+                $( "#panMinPWM" ).val( configData.panMinPWM );
+                $( "#panMaxPWM" ).val( configData.panMaxPWM );
+                $( "#tiltMinPWM" ).val( configData.tiltMinPWM );
+                $( "#tiltMaxPWM" ).val( configData.tiltMaxPWM );
+                $( "#batteryType" ).val( configData.batteryType );
+            };
+            socket.onopen = function() {
+                socket.send( "GetConfig" );
+            };
+            
+            $( "#panAngle" ).change( function() { onSliderChange( $( this ), socket ); } );
+            $( "#tiltAngle" ).change( function() { onSliderChange( $( this ), socket ); } );
+            $( "#panAngle" ).val( 90 );
+            $( "#panAngleDisplay" ).text( "90" );
+            $( "#tiltAngle" ).val( 90 );
+            $( "#tiltAngleDisplay" ).text( "90" );
+        });
+        </script>
+    </head>
+    <body>
+        <br/>
+        <table>
+            <tr>
+                <td></td>
+                <td>PWM for 0</td>
+                <td>PWM for 180</td>
+                <td></td>
+                <td></td>
+            </tr>
+            <tr>
+                <td>Pan</td>
+                <td><input id="panMinPWM" type="text"></td>
+                <td><input id="panMaxPWM" type="text"></td>
+                <td><input id="panAngle" type="range" min="0" max="180" value="90"></td>
+                <td id="panAngleDisplay">23</td>
+            </tr>
+            <tr>
+                <td>Tilt</td>
+                <td><input id="tiltMinPWM" type="text"></td>
+                <td><input id="tiltMaxPWM" type="text"></td>
+                <td><input id="tiltAngle" type="range" min="0" max="180" value="90"></td>
+                <td id="tiltAngleDisplay">23</td>
+            </tr>
+        </table>  
+        
+        <br/>
+        <table>
+            <tr>
+                <td>
+                    Battery: 
+                </td>
+                <td>
+                    <select id="batteryType">
+                        <option value="4xNiMh">4xNiMh</option>
+                        <option value="6xNiMh">6xNiMh</option>
+                        <option value="4xAlkaline">4xAlkaline</option>
+                        <option value="6xAlkaline">6xAlkaline</option>
+                    </select>
+                </td>
+            </tr>
+        </table> 
+        
+        <button type="button">Save</button> 
+    </body>
+</html>

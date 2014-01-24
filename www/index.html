@@ -91,9 +91,9 @@
     
         $(document).ready(function() { 
         
-             webSocktURL = "http://" + window.location.hostname + "/robot_control";
+             webSocketURL = "http://" + window.location.hostname + "/robot_control";
              cameraURL = "http://" + window.location.hostname + ":8080/?action=stream";
-             socket = new SockJS( webSocktURL );
+             socket = new SockJS( webSocketURL );
          
              $("#camera").attr( "src", cameraURL );
    
@@ -132,7 +132,7 @@
                     socket.send( "StartStreaming" );
                     $("#camera").attr( "src", cameraURL );
                 } else {
-                    socket = new SockJS( webSocktURL );
+                    socket = new SockJS( webSocketURL );
                 } }, 1000 );
             
             layoutControls();

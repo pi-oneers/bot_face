@@ -35,6 +35,7 @@ import signal
 import tornado.httpserver
 import tornado.ioloop
 import tornado.web
+import tornado.escape
 import sockjs.tornado
 import threading
 import Queue
@@ -127,6 +128,11 @@ class Robot:
             
                 self.panAngle = self.CENTRE_ANGLE
                 self.tiltAngle = self.CENTRE_ANGLE
+                
+            elif command[ 0 ] == "n":   # Set neck angles
+            
+                self.panAngle = command[ 1 ]
+                self.tiltAngle = command[ 2 ]
         
         # Update the pan and tilt angles
         self.panAngle += self.panSpeed*timeDiff
@@ -185,6 +191,17 @@ class ConnectionHandler( sockjs.tornado.SockJSConnection ):
                 elif lineData[ 0 ] == "StartStreaming":
                     
                     cameraStreamer.startStreaming()
+                    
+                elif lineData[ 0 ] == "GetConfig":
+                    
+                    config = {
+                        "panMinPWM" : 500,
+                        "panMaxPWM" : 2400,
+                        "tiltMinPWM" : 500,
+                        "tiltMaxPWM" : 2400,
+                        "batteryType" : "6xNiMh"
+                    }
+                    self.send( tornado.escape.json_encode( config ) )
                 
                 elif lineData[ 0 ] == "Move" and len( lineData ) >= 3:
                     
@@ -202,8 +219,6 @@ class ConnectionHandler( sockjs.tornado.SockJSConnection ):
                     leftMotorSpeed = max( -MAX_ABS_MOTOR_SPEED, min( leftMotorSpeed, MAX_ABS_MOTOR_SPEED ) )
                     rightMotorSpeed = max( -MAX_ABS_MOTOR_SPEED, min( rightMotorSpeed, MAX_ABS_MOTOR_SPEED ) )
                     
-                    print motorJoystickX, motorJoystickY, leftMotorSpeed, rightMotorSpeed
-                    
                     if robot != None:
                         robot.commandQueue.put( [ "m", leftMotorSpeed, rightMotorSpeed ] )
                     
@@ -218,7 +233,26 @@ class ConnectionHandler( sockjs.tornado.SockJSConnection ):
                     
                     if robot != None:
                         robot.commandQueue.put( [ "l", panSpeed, tiltSpeed ] )
+                        
+                elif lineData[ 0 ] == "SetNeckAngles" and len( lineData ) >= 3:
+                    
+                    panAngle = Robot.CENTRE_ANGLE
+                    tiltAngle = Robot.CENTRE_ANGLE
+                    
+                    try:
+                        panAngle = float( lineData[ 1 ] )
+                    except Exception:
+                        pass
+                    
+                    try:
+                        tiltAngle = float( lineData[ 2 ] )
+                    except Exception:
+                        pass
+                    
+                    if robot != None:
+                        robot.commandQueue.put( [ "n", panAngle, tiltAngle ] )
 
+                    
     #-----------------------------------------------------------------------------------------------
     def on_close(self):
         print 'connection closed'
@@ -290,12 +324,12 @@ if __name__ == "__main__":
     # Create the configuration for the web server
     router = sockjs.tornado.SockJSRouter( 
         ConnectionHandler, '/robot_control' )
-    application = tornado.web.Application( [ 
+    application = tornado.web.Application( router.urls + [ 
         ( r"/", MainHandler ), 
+        ( r"/(.*)", tornado.web.StaticFileHandler, { "path": webPath } ),
         ( r"/css/(.*)", tornado.web.StaticFileHandler, { "path": webPath + "/css" } ),
-        ( r"/fonts/(.*)", tornado.web.StaticFileHandler, { "path": webPath + "/fonts" } ),
-        ( r"/js/(.*)", tornado.web.StaticFileHandler, { "path": webPath + "/js" } ) ] \
-        + router.urls )
+        ( r"/css/images/(.*)", tornado.web.StaticFileHandler, { "path": webPath + "/css/images" } ),
+        ( r"/js/(.*)", tornado.web.StaticFileHandler, { "path": webPath + "/js" } ) ] )
     
     #( r"/(.*)", tornado.web.StaticFileHandler, {"path": scriptPath + "/www" } ) ] \
     
