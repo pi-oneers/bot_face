@@ -88,8 +88,10 @@ def calculateCheckSum( msgBuffer ):
 #---------------------------------------------------------------------------------------------------
 class SerialReadProcess( threading.Thread ):
 
+    DEFAULT_UPDATE_RATE_HZ = 100.0
+
     #-----------------------------------------------------------------------------------------------
-    def __init__( self, serialPort, responseQueue ):
+    def __init__( self, serialPort, responseQueue, updateRateHz=DEFAULT_UPDATE_RATE_HZ ):
         
         threading.Thread.__init__( self )
         self.serialPort = serialPort
@@ -97,6 +99,10 @@ class SerialReadProcess( threading.Thread ):
         self.serialBuffer = ""
         
         self.stopEvent = threading.Event()
+        
+        self.updateRateHz = updateRateHz
+        if self.updateRateHz <= 0.0:
+            self.updateRateHz = 1.0
 
     #-----------------------------------------------------------------------------------------------
     def stop( self ):
@@ -110,6 +116,8 @@ class SerialReadProcess( threading.Thread ):
     def run( self ):
         
         while not self.isStopped():
+            
+            startTime = time.time()
             
             numBytesAvailable = self.serialPort.inWaiting()
             if numBytesAvailable > 0:
@@ -143,6 +151,11 @@ class SerialReadProcess( threading.Thread ):
                         msgStartPos = self.serialBuffer.find( MESSAGE_MARKER )
                     else:
                         msgStartPos = -1
+                        
+            endTime = time.time()
+            sleepTime = 1.0/self.updateRateHz - (endTime - startTime)
+            if sleepTime > 0.0:
+                time.sleep( sleepTime )
                     
     #-----------------------------------------------------------------------------------------------
     def processMessage( self, msgBuffer ):
