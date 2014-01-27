@@ -37,9 +37,9 @@
 
             $joystick.data('joystick-options').moveEvent.call(
                 $joystick, getValue.call(this) );
-        
-            
         };
+        
+        
 
         // Init
         if (typeof val === 'object') {
@@ -74,7 +74,8 @@
  
                 $joystick.on('touchstart mousedown', function(e) {
                     e.preventDefault();
-                    $joystick.data('clicked', true)
+                    $joystick.data('clicked', true);
+                    $joystick.data('clickStartTime', new Date().getTime() );
                 });
 
                 // TODO Touchcancel
@@ -82,7 +83,13 @@
                     e.preventDefault();
                     $joystick.data('clicked', false);
                     
-                        console.log( e.type );
+                    var clickEndPos = getValue.call($joystick[0]);
+                    var clickEndTime = new Date().getTime();
+                    if ( clickEndTime - $joystick.data('clickStartTime') <= 1000 )
+                    {
+                        $joystick.data('joystick-options').clickEvent.call( $joystick[0], clickEndPos );
+                    }
+                    
                     
                     if ($joystick.data('joystick-options').xSnap) {
                         setValue.call($joystick[0], 0.0, getValue.call($joystick[0]).y);
@@ -135,27 +142,6 @@
 
                         $joystick.data('joystick-options').moveEvent.call($joystick[0], getValue.call(this));
                     }
-                });
-                
-                $joystick.on('click', function(e) {
-                    
-                    var $joystick = $(this);
-                    var $innerCircle = $(this).children('.inner_circle');
-                
-                    var innerCircleRadius = $innerCircle.width()/2;
-                    var innerCircleLeft = $joystick.width()/2 - $innerCircle.width()/2;
-                    var innerCircleTop = $joystick.height()/2 - $innerCircle.height()/2;
-                    var innerCircleCentreX = innerCircleLeft + innerCircleRadius;
-                    var innerCircleCentreY = innerCircleTop + innerCircleRadius;
-                    
-                    pageX = e.pageX;
-                    pageY = e.pageY;
-                    var x = pageX - ($joystick.offset().left + innerCircleCentreX);
-                    var y = pageY - ($joystick.offset().top + innerCircleCentreY);
-                    
-                    // Pass the position of the click relative to the joystick centre
-                    // to the clickEvent
-                    $joystick.data('joystick-options').clickEvent.call($joystick[0], {x: x, y: y});
                 });
             });
         }

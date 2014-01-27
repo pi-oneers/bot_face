@@ -118,7 +118,7 @@
                         socket.send( "PanTilt " + pos.x + " " + pos.y ); } },
                  clickEvent: function(clickPos) { 
                     if ( socket.readyState == SockJS.OPEN 
-                        && Math.abs( clickPos.x ) < 20 && Math.abs( clickPos.y ) < 20 ) 
+                        && Math.abs( clickPos.x ) < 0.3 && Math.abs( clickPos.y ) < 0.3 ) 
                     {
                         socket.send( "Centre" ); 
                     } }

@@ -43,8 +43,9 @@ import mini_driver
 import camera_streamer
 
 JOYSTICK_DEAD_ZONE = 0.1
-MAX_ABS_MOTOR_SPEED = 30.0
-MAX_ABS_NECK_SPEED = 20.0    # Degrees per second
+MAX_ABS_MOTOR_SPEED = 30.0  # Duty cycle of motors (0 to 100%)
+MAX_ABS_TURN_SPEED = 20.0   # Duty cycle of motors (0 to 100%)
+MAX_ABS_NECK_SPEED = 20.0   # Degrees per second
 
 robot = None
 
@@ -213,8 +214,8 @@ class ConnectionHandler( sockjs.tornado.SockJSConnection ):
                     rightMotorSpeed = MAX_ABS_MOTOR_SPEED*motorJoystickY
                     
                     # Set turn speed from motorJoystickX
-                    leftMotorSpeed += MAX_ABS_MOTOR_SPEED*motorJoystickX
-                    rightMotorSpeed -= MAX_ABS_MOTOR_SPEED*motorJoystickX
+                    leftMotorSpeed += MAX_ABS_TURN_SPEED*motorJoystickX
+                    rightMotorSpeed -= MAX_ABS_TURN_SPEED*motorJoystickX
                     
                     leftMotorSpeed = max( -MAX_ABS_MOTOR_SPEED, min( leftMotorSpeed, MAX_ABS_MOTOR_SPEED ) )
                     rightMotorSpeed = max( -MAX_ABS_MOTOR_SPEED, min( rightMotorSpeed, MAX_ABS_MOTOR_SPEED ) )
