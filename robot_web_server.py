@@ -28,6 +28,16 @@
 # OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE 
 # OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
+import logging
+
+LOG_FILENAME = "/tmp/robot_web_server_log.txt"
+logging.basicConfig( filename=LOG_FILENAME, level=logging.DEBUG )
+
+# Also log to stdout
+consoleHandler = logging.StreamHandler()
+consoleHandler.setLevel( logging.DEBUG )
+logging.getLogger( "" ).addHandler( consoleHandler )
+
 import os.path
 import math
 import time
@@ -43,8 +53,8 @@ import mini_driver
 import camera_streamer
 
 JOYSTICK_DEAD_ZONE = 0.1
-MAX_ABS_MOTOR_SPEED = 30.0  # Duty cycle of motors (0 to 100%)
-MAX_ABS_TURN_SPEED = 20.0   # Duty cycle of motors (0 to 100%)
+MAX_ABS_MOTOR_SPEED = 50.0  # Duty cycle of motors (0 to 100%)
+MAX_ABS_TURN_SPEED = 30.0   # Duty cycle of motors (0 to 100%)
 MAX_ABS_NECK_SPEED = 20.0   # Degrees per second
 
 robot = None
@@ -176,7 +186,7 @@ class ConnectionHandler( sockjs.tornado.SockJSConnection ):
         try:
             message = str( message )
         except Exception:
-            print "Got a message that couldn't be converted to a string"
+            logging.warning( "Got a message that couldn't be converted to a string" )
             return
         
         if isinstance( message, str ):
@@ -256,7 +266,7 @@ class ConnectionHandler( sockjs.tornado.SockJSConnection ):
                     
     #-----------------------------------------------------------------------------------------------
     def on_close(self):
-        print 'connection closed'
+        logging.info( "SockJS connection closed" )
 
     #-----------------------------------------------------------------------------------------------
     def extractNormalisedJoystickData( self, dataX, dataY ):
@@ -343,7 +353,7 @@ if __name__ == "__main__":
     robotConnectionThread.start()
 
     # Now start the web server
-    print "Starting web server..."
+    logging.info( "Starting web server..." )
     http_server = tornado.httpserver.HTTPServer( application )
     http_server.listen( 80 )
     
@@ -357,7 +367,7 @@ if __name__ == "__main__":
     
     tornado.ioloop.IOLoop.instance().start()
     
-    # Shur down code
+    # Shut down code
     robotConnectionThread.join()
     
     if robot != None:

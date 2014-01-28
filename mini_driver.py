@@ -26,6 +26,7 @@
 # OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE 
 # OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
+import logging
 import os.path
 import re
 import serial
@@ -124,9 +125,7 @@ class SerialReadProcess( threading.Thread ):
                 
                 newBytes = self.serialPort.read( numBytesAvailable )
                 self.serialBuffer += newBytes
-
-                #print "---> Got", newBytes
-                
+               
                 # Check to see if we've received a message
                 msgStartPos = self.serialBuffer.find( MESSAGE_MARKER )
                 while msgStartPos != -1:
@@ -159,11 +158,9 @@ class SerialReadProcess( threading.Thread ):
                     
     #-----------------------------------------------------------------------------------------------
     def processMessage( self, msgBuffer ):
-        
-        #print "Got message with {0} bytes".format( len( msgBuffer ) )
-        
+          
         if calculateCheckSum( msgBuffer ) != ord( msgBuffer[ -1 ] ):
-            print "Warning: Got message with invalid checksum"
+            logging.warning( "Got message with invalid checksum" )
             self.responseQueue.put( "Invalid" )
             return
         
@@ -173,7 +170,7 @@ class SerialReadProcess( threading.Thread ):
             dataBytes = msgBuffer[ 4:-1 ]
             if len( dataBytes ) < 4:
                 
-                print "Warning: Got message with invalid number of bytes"
+                logging.warning( "Got message with invalid number of bytes" )
                 self.responseQueue.put( "Invalid" )
                 
             else:
@@ -184,23 +181,22 @@ class SerialReadProcess( threading.Thread ):
                 versionMinor = ord( dataBytes[ 3 ] )
                 
                 firmwareInfo = FirmwareInfo( idHigh, idLow, versionMajor, versionMinor )
-                #print "Read ", firmwareInfo
-                
+ 
                 self.responseQueue.put( firmwareInfo )
             
         elif messageId == RESPONSE_ID_INVALID_COMMAND:
             
-            print "Invalid command sent"
+            logging.info( "Invalid command sent" )
             self.responseQueue.put( "Invalid" )
             
         elif messageId == RESPONSE_ID_INVALID_CHECK_SUM:
             
-            print "Sent message had invalid checksum"
+            logging.info( "Sent message had invalid checksum" )
             self.responseQueue.put( "Invalid" )
         
         else:
             
-            print "Error: Got unrecognised response id -", messageId
+            logging.warning( "Got unrecognised response id - " + str( messageId ) )
             self.responseQueue.put( "Invalid" )
 
 #---------------------------------------------------------------------------------------------------
@@ -264,8 +260,6 @@ class Connection():
             + chr( 0 )
         msgBuffer = msgBuffer[ :-1 ] + chr( calculateCheckSum( msgBuffer ) )
         
-        #print "Setting outputs", leftMotorSpeed, rightMotorSpeed
-
         self.serialPort.write( msgBuffer )
         
     #-----------------------------------------------------------------------------------------------
@@ -326,16 +320,15 @@ class MiniDriver():
         
         self.connection = Connection( self.SERIAL_PORT_NAME, self.BAUD_RATE )
         firmwareInfo = self.connection.getFirmwareInfo()
-        print firmwareInfo
-        print self.__getExpectedFirmwareInfo()
-        print firmwareInfo == self.__getExpectedFirmwareInfo()
+        logging.info( "Read " + str( firmwareInfo ) )
+        logging.info( "Expected " + str( self.__getExpectedFirmwareInfo() ) )
         
         if firmwareInfo != self.__getExpectedFirmwareInfo():
             
             self.connection.close()
             self.connection = None
             
-            print "Unable to connect to correct firmware, uploading..."
+            logging.info( "Unable to connect to correct firmware, uploading..." )
             uploadResult = ino_uploader.upload( self.__getFirmwareDir(), 
                 serialPortName=self.SERIAL_PORT_NAME, boardModel=self.BOARD_MODEL )
             
@@ -343,7 +336,7 @@ class MiniDriver():
                 
                 self.connection = Connection( self.SERIAL_PORT_NAME, self.BAUD_RATE )
                 firmwareInfo = self.connection.getFirmwareInfo()
-                print firmwareInfo
+                logging.info( "Read " + str( firmwareInfo ) )
                 
                 if firmwareInfo != self.__getExpectedFirmwareInfo():
             

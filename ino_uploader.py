@@ -30,6 +30,7 @@ import os
 import shutil
 import filecmp
 import subprocess
+import logging
 
 #---------------------------------------------------------------------------------------------------
 class BoardInfo:
@@ -44,6 +45,7 @@ class BoardInfo:
 #---------------------------------------------------------------------------------------------------
 DEFAULT_SERIAL_PORT_NAME = "/dev/ttyUSB0"
 DEFAULT_BOARD_MODEL = "uno"
+BUILD_OUTPUT_FILENAME = "/tmp/ino_build_output.txt"
 
 BOARD_INFO_DICT = {
     "uno" : BoardInfo( "uno", "atmega328p", 115200 ),
@@ -100,30 +102,44 @@ def upload( sketchDir, serialPortName=DEFAULT_SERIAL_PORT_NAME,
     # Copy files over if needed    
     if fileCopyNeeded:
         
+        logging.info( "Copying sketch src files" )
         if os.path.exists( inoUploaderSrcDir ):
             shutil.rmtree( inoUploaderSrcDir )
             
         shutil.copytree( sketchDir, inoUploaderSrcDir )
         
+    else:
+        
+        logging.info( "No file copy needed" )
+        
     # Now try to build the sketch
+    logging.debug( "Building sketch in dir " + inoUploaderSketchDir )
+    
+    outputFile = open( BUILD_OUTPUT_FILENAME, "w" )
     buildResult = subprocess.call( 
-        [ "/usr/local/bin/ino", "build", "-m", boardModel ], cwd=inoUploaderSketchDir )
+        [ "/usr/local/bin/ino", "build", "-m", boardModel ], cwd=inoUploaderSketchDir, 
+        stdout=outputFile, stderr=outputFile )
+    outputFile.close()
     
     # Upload if the build was successful
     if buildResult == 0:
         
         hexFilename = inoUploaderSketchDir + "/.build/{0}/firmware.hex".format( boardModel )
         
-        print "Trying to upload", boardModel
+        logging.debug( "Trying to upload " + hexFilename )
         
         uploadResult = subprocess.call( [ "avrdude", 
             "-p", boardInfo.processor,
             "-P", serialPortName, "-c", "arduino", "-b", str( boardInfo.uploadSpeed ), 
             "-D", "-U", "flash:w:{0}:i".format( hexFilename ) ] )
 
-        print "uploadResult", uploadResult
+        logging.debug( "uploadResult = " + str( uploadResult ) )
             
         if uploadResult == 0:
             uploadSucceeded = True
+    
+    else:
+        
+        logging.warning( "Building of sketch was unsuccessful" )
     
     return uploadSucceeded

@@ -31,6 +31,7 @@ import os
 import os.path
 import subprocess
 import time
+import logging
 
 #---------------------------------------------------------------------------------------------------
 class CameraStreamer:
