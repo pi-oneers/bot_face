@@ -32,5 +32,11 @@ Running
 
 Start the server by running
 
-
     sudo ./robot_web_server.py
+    
+Alternatively, get the server to start when the Raspberry Pi boots by running
+
+    sudo cp init.d/robot_web_server /etc/init.d/robot_web_server
+    sudo chmod a+x /etc/init.d/robot_web_server
+    sudo update-rc.d robot_web_server defaults
+
