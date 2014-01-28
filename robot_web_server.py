@@ -51,6 +51,7 @@ import threading
 import Queue
 import camera_streamer
 import robot_controller
+import json
 
 JOYSTICK_DEAD_ZONE = 0.1
 MAX_ABS_MOTOR_SPEED = 50.0  # Duty cycle of motors (0 to 100%)
@@ -104,14 +105,28 @@ class ConnectionHandler( sockjs.tornado.SockJSConnection ):
                     
                 elif lineData[ 0 ] == "GetConfig":
                     
-                    config = {
-                        "panMinPWM" : 500,
-                        "panMaxPWM" : 2400,
-                        "tiltMinPWM" : 500,
-                        "tiltMaxPWM" : 2400,
-                        "batteryType" : "6xNiMh"
-                    }
-                    self.send( tornado.escape.json_encode( config ) )
+                    # Get the current configuration from the robot and return it
+                    configDict = {}
+                    
+                    if robot != None:
+                        configDict = robot.getConfigDict()
+                    
+                    self.send( json.dumps( configDict ) )
+                
+                elif lineData[ 0 ] == "SetConfig" and len( lineData ) >= 2:
+                    
+                    # Send the new configuration to the robot
+                    configDict = {}
+                    
+                    print "Got config data", lineData[ 1 ]
+                    
+                    try:
+                        configDict = json.loads( lineData[ 1 ] )
+                    except Exception:
+                        pass
+                    
+                    if robot != None:
+                        robot.commandQueue.put( [ "s", configDict ] )
                 
                 elif lineData[ 0 ] == "Move" and len( lineData ) >= 3:
                     

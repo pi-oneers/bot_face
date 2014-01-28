@@ -1,9 +1,11 @@
 
 import logging
+import os.path
 import math
 import time
 import Queue
 import mini_driver
+import json
 
 #--------------------------------------------------------------------------------------------------- 
 class RobotController:
@@ -15,8 +17,16 @@ class RobotController:
     MAX_TIME_DIFF = 0.25
     TIME_BETWEEN_SERVO_SETTING_UPDATES = 1.0
     
+    CONFIG_DIR = "config"
+    CONFIG_FILENAME = "config.json"
+    
+    MIN_PULSE_WIDTH = 400
+    MAX_PULSE_WIDTH = 2600
+    
     #-----------------------------------------------------------------------------------------------
     def __init__( self ):
+        
+        self.scriptPath = os.path.dirname( __file__ )
         
         self.miniDriver = mini_driver.MiniDriver()
         connected = self.miniDriver.connect()
@@ -29,6 +39,8 @@ class RobotController:
         self.panPulseWidthMax = 2100
         self.tiltPulseWidthMin = 550
         self.tiltPulseWidthMax = 2400
+        
+        self.tryToLoadConfigFile()
         
         self.leftMotorSpeed = 0
         self.rightMotorSpeed = 0
@@ -50,6 +62,80 @@ class RobotController:
     def disconnect( self ):
         
         self.miniDriver.disconnect()
+    
+    #-----------------------------------------------------------------------------------------------
+    def tryToLoadConfigFile( self ):
+        
+        absConfigFilename = os.path.abspath( 
+            self.scriptPath + "/" + self.CONFIG_DIR + "/" + self.CONFIG_FILENAME )
+        
+        if os.path.exists( absConfigFilename ):
+            try:
+                with open( absConfigFilename ) as configFile:
+                    
+                    configDict = json.load( configFile )
+                    self.readDataFromConfigDict( configDict )
+                    
+            except Exception as e:
+                logging.warning( "Unable to load config file. Exception was " + str( e ) )
+    
+    #-----------------------------------------------------------------------------------------------
+    def readDataFromConfigDict( self, configDict ):
+        
+        if "panPulseWidthMin" in configDict:
+            self.panPulseWidthMin = self.parsePulseWidth( 
+                configDict[ "panPulseWidthMin" ], self.panPulseWidthMin )
+        
+        if "panPulseWidthMax" in configDict:
+            self.panPulseWidthMax = self.parsePulseWidth( 
+                configDict[ "panPulseWidthMax" ], self.panPulseWidthMax )
+        
+        if "tiltPulseWidthMin" in configDict:
+            self.tiltPulseWidthMin = self.parsePulseWidth( 
+                configDict[ "tiltPulseWidthMin" ], self.tiltPulseWidthMin )
+        
+        if "tiltPulseWidthMax" in configDict:
+            self.tiltPulseWidthMax = self.parsePulseWidth( 
+                configDict[ "tiltPulseWidthMax" ], self.tiltPulseWidthMax )
+    
+    #-----------------------------------------------------------------------------------------------
+    def parsePulseWidth( self, inputData, defaultValue=MIN_PULSE_WIDTH ):
+        
+        result = defaultValue
+        
+        try:
+            result = int( inputData )
+        except Exception:
+            pass
+        
+        return max( self.MIN_PULSE_WIDTH, min( result, self.MAX_PULSE_WIDTH ) )
+    
+    #-----------------------------------------------------------------------------------------------
+    def writeConfigFile( self ):
+        
+        configDict = self.getConfigDict()
+        
+        absConfigDir = os.path.abspath( self.scriptPath + "/" + self.CONFIG_DIR )
+        absConfigFilename = absConfigDir + "/" + self.CONFIG_FILENAME
+        
+        if not os.path.exists( absConfigDir ):
+            os.makedirs( absConfigDir )
+            
+        with open( absConfigFilename, "w" ) as configFile:
+            
+            json.dump( configDict, configFile )
+        
+    #-----------------------------------------------------------------------------------------------
+    def getConfigDict( self ):    
+    
+        configDict = {
+            "panPulseWidthMin" : self.panPulseWidthMin,
+            "panPulseWidthMax" : self.panPulseWidthMax,
+            "tiltPulseWidthMin" : self.tiltPulseWidthMin,
+            "tiltPulseWidthMax" : self.tiltPulseWidthMax
+        }
+        
+        return configDict
     
     #-----------------------------------------------------------------------------------------------
     def update( self ):
@@ -84,6 +170,12 @@ class RobotController:
             
                 self.panAngle = command[ 1 ]
                 self.tiltAngle = command[ 2 ]
+                
+            elif command[ 0 ] == "s":   # Set config values
+            
+                configDict = command[ 1 ]
+                self.readDataFromConfigDict( configDict )
+                self.writeConfigFile()
         
         # Update the pan and tilt angles
         self.panAngle += self.panSpeed*timeDiff

@@ -41,12 +41,27 @@
                 console.log('message', e.data);
                 
                 configData = $.parseJSON( e.data );
-                $( "#panMinPWM" ).val( configData.panMinPWM );
-                $( "#panMaxPWM" ).val( configData.panMaxPWM );
-                $( "#tiltMinPWM" ).val( configData.tiltMinPWM );
-                $( "#tiltMaxPWM" ).val( configData.tiltMaxPWM );
-                $( "#batteryType" ).val( configData.batteryType );
+                if ( "panPulseWidthMin" in configData )
+                {
+                    $( "#panMinPWM" ).val( configData[ "panPulseWidthMin" ] );
+                }
+                
+                if ( "panPulseWidthMax" in configData )
+                {
+                    $( "#panMaxPWM" ).val( configData[ "panPulseWidthMax" ] );
+                }
+                
+                if ( "tiltPulseWidthMin" in configData )
+                {
+                    $( "#tiltMinPWM" ).val( configData[ "tiltPulseWidthMin" ] );
+                }
+                
+                if ( "tiltPulseWidthMax" in configData )
+                {
+                    $( "#tiltMaxPWM" ).val( configData[ "tiltPulseWidthMax" ] );
+                }
             };
+            
             socket.onopen = function() {
                 socket.send( "GetConfig" );
             };
@@ -57,6 +72,20 @@
             $( "#panAngleDisplay" ).text( "90" );
             $( "#tiltAngle" ).val( 90 );
             $( "#tiltAngleDisplay" ).text( "90" );
+            
+            $( "#btnSave" ).click( function() {
+                var configData = {
+                    panPulseWidthMin: $( "#panMinPWM" ).val(),
+                    panPulseWidthMax: $( "#panMaxPWM" ).val(),
+                    tiltPulseWidthMin: $( "#tiltMinPWM" ).val(),
+                    tiltPulseWidthMax: $( "#tiltMaxPWM" ).val()
+                };
+                
+                if ( socket.readyState == SockJS.OPEN ) 
+                {
+                    socket.send( "SetConfig " + JSON.stringify( configData ) );
+                }
+            } );
         });
         </script>
     </head>
@@ -87,22 +116,7 @@
         </table>  
         
         <br/>
-        <table>
-            <tr>
-                <td>
-                    Battery: 
-                </td>
-                <td>
-                    <select id="batteryType">
-                        <option value="4xNiMh">4xNiMh</option>
-                        <option value="6xNiMh">6xNiMh</option>
-                        <option value="4xAlkaline">4xAlkaline</option>
-                        <option value="6xAlkaline">6xAlkaline</option>
-                    </select>
-                </td>
-            </tr>
-        </table> 
         
-        <button type="button">Save</button> 
+        <button id="btnSave" type="button">Save</button> 
     </body>
 </html>

@@ -30,7 +30,7 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE. */
 
 //------------------------------------------------------------------------------
 const uint8_t VERSION_MAJOR = 0;
-const uint8_t VERSION_MINOR = 27;
+const uint8_t VERSION_MINOR = 28;
 const uint16_t FIRMWARE_ID = 0xACED;
 
 const uint16_t MAX_MSG_SIZE = 16;
@@ -55,7 +55,40 @@ const int RIGHT_MOTOR_PWM_PIN = 10;
 const int PAN_SERVO_PIN = 4;
 const int TILT_SERVO_PIN = 3;
 
+const int ABSOLUTE_MIN_PWM = 400;
+const int ABSOLUTE_MAX_PWM = 2600;
+
 const unsigned long MOTOR_COMMAND_TIMEOUT_MS = 2000;
+
+//------------------------------------------------------------------------------
+// This class is provided because the Arduino Servo library maps minimum and 
+// maximum bounds to a single byte for some reason.
+class ServoLimits
+{
+    // MIN_PULSE_WIDTH and MAX_PULSE_WIDTH come from Servo.h
+    public: ServoLimits( int minPWM=MIN_PULSE_WIDTH, int maxPWM=MAX_PULSE_WIDTH )
+    {
+        setLimits( minPWM, maxPWM );
+    }
+    
+    public: void setLimits( int minPWM, int maxPWM )
+    {
+        mMinPWM = constrain( minPWM, ABSOLUTE_MIN_PWM, ABSOLUTE_MAX_PWM );
+        mMaxPWM = constrain( maxPWM, ABSOLUTE_MIN_PWM, ABSOLUTE_MAX_PWM );
+    }
+    
+    public: int convertAngleToPWM( int angle )
+    {
+        angle = constrain( angle, 0, 180 );
+        return map( angle, 0, 180, mMinPWM, mMaxPWM );
+    }
+    
+    public: int getMinPWM() const { return mMinPWM; }
+    public: int getMaxPWM() const { return mMaxPWM; }
+    
+    private: int mMinPWM;
+    private: int mMaxPWM;
+};
 
 //------------------------------------------------------------------------------
 enum eMotorDirection
@@ -75,7 +108,9 @@ uint8_t gMsgBuffer[ MAX_MSG_SIZE ];
 uint16_t gNumMsgBytesReceived = 0;
 
 Servo gPanServo;
+ServoLimits gPanServoLimits;
 Servo gTiltServo;
+ServoLimits gTiltServoLimits;
 
 uint8_t gLeftMotorDutyCycle = 0;
 uint8_t gRightMotorDutyCycle = 0;
@@ -142,8 +177,8 @@ void loop()
     digitalWrite( LEFT_MOTOR_DIR_PIN, ( eMD_Forwards == gLeftMotorDirection ? HIGH : LOW ) );
     digitalWrite( RIGHT_MOTOR_DIR_PIN, ( eMD_Forwards == gRightMotorDirection ? HIGH : LOW ) );
     
-    gPanServo.write( gPanServoAngle );
-    gTiltServo.write( gTiltServoAngle );
+    gPanServo.writeMicroseconds( gPanServoLimits.convertAngleToPWM( gPanServoAngle ) );
+    gTiltServo.writeMicroseconds( gTiltServoLimits.convertAngleToPWM( gTiltServoAngle ) );
 }
 
 //------------------------------------------------------------------------------
@@ -262,18 +297,12 @@ void processMessage()
                 uint16_t servoMax = gMsgBuffer[ 6 ] << 8 | gMsgBuffer[ 7 ];
                 
                 if ( getMessageId() == COMMAND_ID_SET_PAN_SERVO_LIMITS )
-                {
-                    int curAngle = gPanServo.read();
-                    gPanServo.detach();
-                    gPanServo.attach( PAN_SERVO_PIN, servoMin, servoMax );
-                    gPanServo.write( curAngle );
+                {                   
+                    gPanServoLimits.setLimits( servoMin, servoMax );
                 }
                 else
                 {
-                    int curAngle = gTiltServo.read();
-                    gTiltServo.detach();
-                    gTiltServo.attach( TILT_SERVO_PIN, servoMin, servoMax );
-                    gTiltServo.write( curAngle );
+                    gTiltServoLimits.setLimits( servoMin, servoMax );
                 }
                 
                 bCommandHandled = true;
