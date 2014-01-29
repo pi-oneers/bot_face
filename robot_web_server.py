@@ -52,6 +52,7 @@ import Queue
 import camera_streamer
 import robot_controller
 import json
+import ino_uploader
 
 JOYSTICK_DEAD_ZONE = 0.1
 MAX_ABS_MOTOR_SPEED = 50.0  # Duty cycle of motors (0 to 100%)
@@ -128,6 +129,11 @@ class ConnectionHandler( sockjs.tornado.SockJSConnection ):
                     if robot != None:
                         robot.commandQueue.put( [ "s", configDict ] )
                 
+                elif lineData[ 0 ] == "GetLogs":
+                    
+                    # Return a dictionary containing the current logs
+                    self.send( json.dumps( self.getLogsDict() ) )
+                
                 elif lineData[ 0 ] == "Move" and len( lineData ) >= 3:
                     
                     motorJoystickX, motorJoystickY = \
@@ -179,9 +185,30 @@ class ConnectionHandler( sockjs.tornado.SockJSConnection ):
 
                     
     #-----------------------------------------------------------------------------------------------
-    def on_close(self):
+    def on_close( self ):
         logging.info( "SockJS connection closed" )
 
+    #-----------------------------------------------------------------------------------------------
+    def getLogsDict( self ):
+        
+        logsDict = {}
+        
+        # Read in main logs file
+        try:
+            with open( LOG_FILENAME, "r" ) as logFile:
+                logsDict[ "MainLog" ] = logFile.read()
+        except Exception:
+            pass
+        
+        # Read in Ino build output if it exists
+        try:
+            with open( ino_uploader.BUILD_OUTPUT_FILENAME, "r" ) as logFile:
+                logsDict[ "InoBuildLog" ] = logFile.read()
+        except Exception:
+            pass
+
+        return logsDict
+        
     #-----------------------------------------------------------------------------------------------
     def extractNormalisedJoystickData( self, dataX, dataY ):
         
