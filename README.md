@@ -26,12 +26,16 @@ install with
     cd sockjs-tornado
     sudo python setup.py install
 
-    
+Finally, clone this repository by running
+
+    git clone https://bitbucket.org/DawnRobotics/raspberry_pi_camera_bot.git   
+ 
 Running
 -------
 
 Start the server by running
 
+    cd raspberry_pi_camera_bot
     sudo ./robot_web_server.py
     
 Alternatively, get the server to start when the Raspberry Pi boots by running
