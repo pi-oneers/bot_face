@@ -63,6 +63,7 @@
             var motorStick = $('#motor_stick');
             var panTiltStick = $('#pan_tilt_stick');
             var cameraImage = $('#camera');
+            var btnShutdown = $( "#btnShutdown" );
         
             console.log( screen.width + " " + screen.height );
         
@@ -73,6 +74,9 @@
                 motorStick.css( 'top', 0.5*screen.height - motorStick.height()/2 );
                 panTiltStick.css( 'left', 0.9*screen.width - panTiltStick.width()/2 );
                 panTiltStick.css( 'top', 0.5*screen.height - panTiltStick.height()/2 );
+                btnShutdown.css( 'position', 'fixed' );
+                btnShutdown.css( 'left', 0.9*screen.width - btnShutdown.width()/2 );
+                btnShutdown.css( 'top', 0.1*screen.height );
             }
             else
             {
@@ -81,6 +85,9 @@
                 motorStick.css( 'top', 0.7*screen.height - motorStick.height()/2 );
                 panTiltStick.css( 'left', 0.8*screen.width - panTiltStick.width()/2 );
                 panTiltStick.css( 'top', 0.7*screen.height - panTiltStick.height()/2 );
+                btnShutdown.css( 'position', 'fixed' );
+                btnShutdown.css( 'left', 0.5*screen.width - btnShutdown.width()/2 );
+                btnShutdown.css( 'top', 0.6*screen.height - btnShutdown.height()/2 );
             }
             
             cameraImage.css( 'max-width', screen.width );
@@ -125,6 +132,13 @@
              });
              $('#motor_stick').joystick( 'value', 0.0, 0.0 );
              $('#pan_tilt_stick').joystick( 'value', 0.0, 0.0 );
+             
+             $( "#btnShutdown" ).click( function() {
+                if ( socket.readyState == SockJS.OPEN ) 
+                {
+                    socket.send( "Shutdown" );
+                }
+              } );
             
             // Add a periodic function to keep the camera and socket alive
             setInterval( function() { 
@@ -153,6 +167,8 @@
       <div class="inner_circle"></div>
       <div class="handle"></div>
     </div>
+    
+    <button id="btnShutdown" type="button">Shutdown</button>
     
   </body>
 </html>

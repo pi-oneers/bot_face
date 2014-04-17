@@ -53,6 +53,7 @@ import camera_streamer
 import robot_controller
 import json
 import ino_uploader
+import subprocess
 
 JOYSTICK_DEAD_ZONE = 0.1
 MAX_ABS_MOTOR_SPEED = 50.0  # Duty cycle of motors (0 to 100%)
@@ -103,6 +104,11 @@ class ConnectionHandler( sockjs.tornado.SockJSConnection ):
                 elif lineData[ 0 ] == "StartStreaming":
                     
                     cameraStreamer.startStreaming()
+                    
+                elif lineData[ 0 ] == "Shutdown":
+                    
+                     result = subprocess.call( [ "poweroff" ] )
+                     print "Result was", result
                     
                 elif lineData[ 0 ] == "GetConfig":
                     
