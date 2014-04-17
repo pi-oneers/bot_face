@@ -54,10 +54,6 @@ class RobotController:
         
         self.lastServoSettingsSendTime = 0.0
         self.lastUpdateTime = 0.0
-        
-        #self.runningBatteryTest = True
-        #self.batteryTestState = "GoingForward"
-        #self.batteryTestStateStartTime = time.time()
     
     #-----------------------------------------------------------------------------------------------
     def __del__( self ):
@@ -182,49 +178,6 @@ class RobotController:
                 configDict = command[ 1 ]
                 self.readDataFromConfigDict( configDict )
                 self.writeConfigFile()
-        
-        # TODO: Remove this battery testing code and move it to an external test script
-        #if self.runningBatteryTest:
-            
-            #if self.batteryTestState == "GoingForward":
-                #self.leftMotorSpeed = 60
-                #self.rightMotorSpeed = 60
-                
-                #if time.time() - self.batteryTestStateStartTime > 4.0: 
-                    #self.batteryTestState = "TurningRight"
-                    #self.batteryTestStateStartTime = time.time()
-                
-            #elif self.batteryTestState == "TurningRight":
-                #self.leftMotorSpeed = 60
-                #self.rightMotorSpeed = -60
-                
-                #if time.time() - self.batteryTestStateStartTime > 4.0: 
-                    #self.batteryTestState = "TurningLeft"
-                    #self.batteryTestStateStartTime = time.time()
-                
-            #elif self.batteryTestState == "GoingBackward":
-                #self.leftMotorSpeed = -60
-                #self.rightMotorSpeed = -60
-                
-                #if time.time() - self.batteryTestStateStartTime > 4.0: 
-                    #self.batteryTestState = "Resting"
-                    #self.batteryTestStateStartTime = time.time()
-                
-            #elif self.batteryTestState == "TurningLeft":
-                #self.leftMotorSpeed = -60
-                #self.rightMotorSpeed = 60
-                
-                #if time.time() - self.batteryTestStateStartTime > 4.0: 
-                    #self.batteryTestState = "GoingBackward"
-                    #self.batteryTestStateStartTime = time.time()
-                    
-            #elif self.batteryTestState == "Resting":
-                #self.leftMotorSpeed = 0
-                #self.rightMotorSpeed = 0
-                
-                #if time.time() - self.batteryTestStateStartTime > 4.0: 
-                    #self.batteryTestState = "GoingForward"
-                    #self.batteryTestStateStartTime = time.time()
         
         # Update the pan and tilt angles
         self.panAngle += self.panSpeed*timeDiff
