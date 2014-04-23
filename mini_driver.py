@@ -48,6 +48,11 @@ COMMAND_ID_SET_TILT_SERVO_LIMITS = 4
 RESPONSE_ID_FIRMWARE_INFO = 1
 RESPONSE_ID_INVALID_COMMAND = 2
 RESPONSE_ID_INVALID_CHECK_SUM = 3
+RESPONSE_ID_BATTERY_READING = 4
+
+ADC_REF_VOLTAGE = 5.0
+BATTERY_VOLTAGE_SCALE = 2.0   # Battery voltage is divided by 2 before it is 
+                              # passed to the ADC so we must undo that
 
 #---------------------------------------------------------------------------------------------------
 class FirmwareInfo:
@@ -193,6 +198,18 @@ class SerialReadProcess( threading.Thread ):
             
             logging.info( "Sent message had invalid checksum" )
             self.responseQueue.put( "Invalid" )
+        
+        elif messageId == RESPONSE_ID_BATTERY_READING:
+            
+            dataBytes = msgBuffer[ 4:-1 ]
+            if len( dataBytes ) < 2:
+                
+                logging.warning( "Got message with invalid number of bytes" )
+                self.responseQueue.put( "Invalid" )
+                
+            else:
+                batteryReading = ord( dataBytes[ 0 ] ) << 8 | ord( dataBytes[ 1 ] )
+                print "Battery voltage is", BATTERY_VOLTAGE_SCALE * ADC_REF_VOLTAGE * float( batteryReading )/1023.0
         
         else:
             

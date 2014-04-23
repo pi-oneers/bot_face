@@ -30,7 +30,7 @@ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE. */
 
 //------------------------------------------------------------------------------
 const uint8_t VERSION_MAJOR = 0;
-const uint8_t VERSION_MINOR = 28;
+const uint8_t VERSION_MINOR = 29;
 const uint16_t FIRMWARE_ID = 0xACED;
 
 const uint16_t MAX_MSG_SIZE = 16;
@@ -47,6 +47,7 @@ const uint8_t COMMAND_ID_SET_TILT_SERVO_LIMITS = 4;
 const uint8_t RESPONSE_ID_FIRMWARE_INFO = 1;
 const uint8_t RESPONSE_ID_INVALID_COMMAND = 2;
 const uint8_t RESPONSE_ID_INVALID_CHECK_SUM = 3;
+const uint8_t RESPONSE_ID_BATTERY_READING = 4;
 
 const int LEFT_MOTOR_DIR_PIN = 7;
 const int LEFT_MOTOR_PWM_PIN = 9;
@@ -54,7 +55,10 @@ const int RIGHT_MOTOR_DIR_PIN = 8;
 const int RIGHT_MOTOR_PWM_PIN = 10;
 const int PAN_SERVO_PIN = 4;
 const int TILT_SERVO_PIN = 3;
-
+const int BATTERY_VOLTAGE_PIN = A7;
+                                            
+const unsigned long BATTERY_VOLTAGE_READ_MS = 10;
+                                            
 const int ABSOLUTE_MIN_PWM = 400;
 const int ABSOLUTE_MAX_PWM = 2600;
 
@@ -119,6 +123,7 @@ eMotorDirection gRightMotorDirection = eMD_Forwards;
 uint8_t gPanServoAngle = 90;
 uint8_t gTiltServoAngle = 90;
 unsigned long gLastCommandTime = 0;
+unsigned long gLastBatteryVoltageTime = 0;
 
 const uint8_t NUM_TICKS_PER_MOTOR_WAVE = 100;
 volatile uint8_t gCurMotorWaveTick = 0;
@@ -131,6 +136,7 @@ void processMessage();
 void sendFirmwareInfoResponse();
 void sendInvalidCommandResponse();
 void sendInvalidChecksumResponse();
+void sendBatteryReadingMessage( int batteryReading );
 uint8_t calculateCheckSum( const uint8_t* pData, uint8_t msgSize );
 
 //------------------------------------------------------------------------------
@@ -179,6 +185,13 @@ void loop()
     
     gPanServo.writeMicroseconds( gPanServoLimits.convertAngleToPWM( gPanServoAngle ) );
     gTiltServo.writeMicroseconds( gTiltServoLimits.convertAngleToPWM( gTiltServoAngle ) );
+    
+    if ( curTime - gLastBatteryVoltageTime >= BATTERY_VOLTAGE_READ_MS )
+    {
+        // Read in the battery voltage
+        sendBatteryReadingMessage( analogRead( BATTERY_VOLTAGE_PIN ) );
+        gLastBatteryVoltageTime = curTime;
+    }
 }
 
 //------------------------------------------------------------------------------
@@ -355,6 +368,22 @@ void sendInvalidCheckSumResponse()
     uint8_t msgData[] = 
     {
         0xFF, 0xFF, RESPONSE_ID_INVALID_CHECK_SUM, 0, 0
+    };
+    
+    const uint8_t MSG_SIZE = sizeof( msgData );
+    msgData[ 3 ] = MSG_SIZE;
+    msgData[ MSG_SIZE - 1 ] = calculateCheckSum( msgData, MSG_SIZE );
+    
+    Serial.write( msgData, MSG_SIZE );
+}
+
+//------------------------------------------------------------------------------
+void sendBatteryReadingMessage( int batteryReading )
+{    
+    uint8_t msgData[] = 
+    {
+        0xFF, 0xFF, RESPONSE_ID_BATTERY_READING, 0, // Header
+       (batteryReading >> 8) & 0xFF, batteryReading & 0xFF, 0
     };
     
     const uint8_t MSG_SIZE = sizeof( msgData );

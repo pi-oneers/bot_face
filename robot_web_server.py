@@ -56,9 +56,9 @@ import ino_uploader
 import subprocess
 
 JOYSTICK_DEAD_ZONE = 0.1
-MAX_ABS_MOTOR_SPEED = 50.0  # Duty cycle of motors (0 to 100%)
-MAX_ABS_TURN_SPEED = 30.0   # Duty cycle of motors (0 to 100%)
-MAX_ABS_NECK_SPEED = 20.0   # Degrees per second
+MAX_ABS_MOTOR_SPEED = 80.0  # Duty cycle of motors (0 to 100%)
+MAX_ABS_TURN_SPEED = 60.0   # Duty cycle of motors (0 to 100%)
+MAX_ABS_NECK_SPEED = 30.0   # Degrees per second
 
 robot = None
 

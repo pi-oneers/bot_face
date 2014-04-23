@@ -62,7 +62,7 @@ class CameraStreamer:
         if self.cameraStreamerProcess == None or self.cameraStreamerProcess.poll() != None:
             
             self.cameraStreamerProcess = subprocess.Popen( 
-                [ "raspberry_pi_camera_streamer" ] )
+                [ "/usr/local/bin/raspberry_pi_camera_streamer" ] )
         
         self.streamingStartTime = time.time()         
                 
