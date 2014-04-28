@@ -54,6 +54,9 @@
         }
     </style>
     
+    <link href="css/style.css" rel="stylesheet">
+    <link href="css/modal.css" rel="stylesheet">
+    
     <script src="js/jquery.js"></script>
     <script src="js/jquery.joystick.js"></script>
     <script src="js/sockjs-0.3.min.js"></script>
@@ -135,10 +138,27 @@
              $('#pan_tilt_stick').joystick( 'value', 0.0, 0.0 );
              
              $( "#btnShutdown" ).click( function() {
+             
+                var SHUTDOWN_TIME_MS = 25000;
+             
                 if ( socket.readyState == SockJS.OPEN ) 
                 {
                     socket.send( "Shutdown" );
                 }
+                
+                
+                var modalShutdownDialog = $( "#modalShutdownDialog" );
+                modalShutdownDialog.css( "opacity", 1 );
+                modalShutdownDialog.css( "top", "10%" );
+                modalShutdownDialog.css( "visibility", "visible" );
+                
+                // Wait for the Pi to shutdown. The wait time is determined experimentally with an extra couple of seconds
+                // added on for safety
+                setTimeout( function() {
+                    $( "#shutdownProgress" ).css( "visibility", "hidden" );
+                    $( "#shutdownText" ).text( "It is now safe to switch off the power to the Pi" );
+                }, SHUTDOWN_TIME_MS );
+                
               } );
             
             // Add a periodic function to keep the camera and socket alive
@@ -169,7 +189,18 @@
       <div class="handle"></div>
     </div>
     
-    <button id="btnShutdown" type="button">Shutdown</button>
+    <button id="btnShutdown" type="button" class="btn">Shutdown</button>
+    
+    <div id="modalShutdownDialog">
+        <div class="modal-content">
+            
+            <div class="copy">
+                <p id="shutdownText">Shutting Down</p>
+                <img id="shutdownProgress" src="images/ajax-loader.gif"/>
+            </div>
+        </div>
+        <div class="overlay"></div>
+    </div>
     
   </body>
 </html>

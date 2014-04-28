@@ -287,6 +287,7 @@ if __name__ == "__main__":
         ( r"/(.*)", tornado.web.StaticFileHandler, { "path": webPath } ),
         ( r"/css/(.*)", tornado.web.StaticFileHandler, { "path": webPath + "/css" } ),
         ( r"/css/images/(.*)", tornado.web.StaticFileHandler, { "path": webPath + "/css/images" } ),
+        ( r"/images/(.*)", tornado.web.StaticFileHandler, { "path": webPath + "/images" } ),
         ( r"/js/(.*)", tornado.web.StaticFileHandler, { "path": webPath + "/js" } ) ] )
     
     #( r"/(.*)", tornado.web.StaticFileHandler, {"path": scriptPath + "/www" } ) ] \
