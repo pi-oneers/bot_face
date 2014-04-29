@@ -55,11 +55,6 @@ import json
 import ino_uploader
 import subprocess
 
-JOYSTICK_DEAD_ZONE = 0.1
-MAX_ABS_MOTOR_SPEED = 80.0  # Duty cycle of motors (0 to 100%)
-MAX_ABS_TURN_SPEED = 60.0   # Duty cycle of motors (0 to 100%)
-MAX_ABS_NECK_SPEED = 30.0   # Degrees per second
-
 robot = None
 
 cameraStreamer = None
@@ -90,7 +85,7 @@ class ConnectionHandler( sockjs.tornado.SockJSConnection ):
         except Exception:
             logging.warning( "Got a message that couldn't be converted to a string" )
             return
-        
+
         if isinstance( message, str ):
             
             lineData = message.split( " " )
@@ -99,7 +94,7 @@ class ConnectionHandler( sockjs.tornado.SockJSConnection ):
                 if lineData[ 0 ] == "Centre":
                 
                     if robot != None:
-                        robot.commandQueue.put( [ "c" ] )
+                        robot.centreNeck()
                 
                 elif lineData[ 0 ] == "StartStreaming":
                     
@@ -108,7 +103,7 @@ class ConnectionHandler( sockjs.tornado.SockJSConnection ):
                 elif lineData[ 0 ] == "Shutdown":
                     
                      result = subprocess.call( [ "poweroff" ] )
-                     print "Result was", result
+                     logging.info( "Shutdown request made. Result of call to poweroff was " + str( result ) )
                     
                 elif lineData[ 0 ] == "GetConfig":
                     
@@ -133,7 +128,17 @@ class ConnectionHandler( sockjs.tornado.SockJSConnection ):
                         pass
                     
                     if robot != None:
-                        robot.commandQueue.put( [ "s", configDict ] )
+                        robot.setConfigDict( configDict )
+                
+                elif lineData[ 0 ] == "GetRobotStatus":
+                    
+                    # Get the current status from the robot and return it
+                    statusDict = {}
+                    
+                    if robot != None:
+                        statusDict = robot.getStatusDict()
+                    
+                    self.send( json.dumps( statusDict ) )
                 
                 elif lineData[ 0 ] == "GetLogs":
                     
@@ -143,33 +148,18 @@ class ConnectionHandler( sockjs.tornado.SockJSConnection ):
                 elif lineData[ 0 ] == "Move" and len( lineData ) >= 3:
                     
                     motorJoystickX, motorJoystickY = \
-                        self.extractNormalisedJoystickData( lineData[ 1 ], lineData[ 2 ] )
-                        
-                    # Set forward speed from motorJoystickY
-                    leftMotorSpeed = MAX_ABS_MOTOR_SPEED*motorJoystickY
-                    rightMotorSpeed = MAX_ABS_MOTOR_SPEED*motorJoystickY
-                    
-                    # Set turn speed from motorJoystickX
-                    leftMotorSpeed += MAX_ABS_TURN_SPEED*motorJoystickX
-                    rightMotorSpeed -= MAX_ABS_TURN_SPEED*motorJoystickX
-                    
-                    leftMotorSpeed = max( -MAX_ABS_MOTOR_SPEED, min( leftMotorSpeed, MAX_ABS_MOTOR_SPEED ) )
-                    rightMotorSpeed = max( -MAX_ABS_MOTOR_SPEED, min( rightMotorSpeed, MAX_ABS_MOTOR_SPEED ) )
+                        self.extractJoystickData( lineData[ 1 ], lineData[ 2 ] )
                     
                     if robot != None:
-                        robot.commandQueue.put( [ "m", leftMotorSpeed, rightMotorSpeed ] )
+                        robot.setMotorJoystickPos( motorJoystickX, motorJoystickY )                    
                     
                 elif lineData[ 0 ] == "PanTilt" and len( lineData ) >= 3:
                     
                     neckJoystickX, neckJoystickY = \
-                        self.extractNormalisedJoystickData( lineData[ 1 ], lineData[ 2 ] )
+                        self.extractJoystickData( lineData[ 1 ], lineData[ 2 ] )
                         
-                    # Set pan and tilt angle speeds
-                    panSpeed = -MAX_ABS_NECK_SPEED*neckJoystickX
-                    tiltSpeed = -MAX_ABS_NECK_SPEED*neckJoystickY
-                    
                     if robot != None:
-                        robot.commandQueue.put( [ "l", panSpeed, tiltSpeed ] )
+                        robot.setNeckJoystickPos( neckJoystickX, neckJoystickY )
                         
                 elif lineData[ 0 ] == "SetNeckAngles" and len( lineData ) >= 3:
                     
@@ -187,7 +177,7 @@ class ConnectionHandler( sockjs.tornado.SockJSConnection ):
                         pass
                     
                     if robot != None:
-                        robot.commandQueue.put( [ "n", panAngle, tiltAngle ] )
+                        robot.setNeckAngles( panAngle, tiltAngle )
 
                     
     #-----------------------------------------------------------------------------------------------
@@ -216,7 +206,7 @@ class ConnectionHandler( sockjs.tornado.SockJSConnection ):
         return logsDict
         
     #-----------------------------------------------------------------------------------------------
-    def extractNormalisedJoystickData( self, dataX, dataY ):
+    def extractJoystickData( self, dataX, dataY ):
         
         joystickX = 0.0
         joystickY = 0.0
@@ -230,15 +220,6 @@ class ConnectionHandler( sockjs.tornado.SockJSConnection ):
             joystickY = float( dataY )
         except Exception:
             pass
-
-        stickVectorLength = math.sqrt( joystickX**2 + joystickY**2 )
-        if stickVectorLength > 1.0:
-            joystickX /= stickVectorLength
-            joystickY /= stickVectorLength
-        
-        if stickVectorLength < JOYSTICK_DEAD_ZONE:
-            joystickX = 0.0
-            joystickY = 0.0
             
         return ( joystickX, joystickY )
 

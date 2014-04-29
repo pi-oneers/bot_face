@@ -97,11 +97,12 @@ class SerialReadProcess( threading.Thread ):
     DEFAULT_UPDATE_RATE_HZ = 100.0
 
     #-----------------------------------------------------------------------------------------------
-    def __init__( self, serialPort, responseQueue, updateRateHz=DEFAULT_UPDATE_RATE_HZ ):
+    def __init__( self, serialPort, responseQueue, statusQueue, updateRateHz=DEFAULT_UPDATE_RATE_HZ ):
         
         threading.Thread.__init__( self )
         self.serialPort = serialPort
         self.responseQueue = responseQueue
+        self.statusQueue = statusQueue
         self.serialBuffer = ""
         
         self.stopEvent = threading.Event()
@@ -209,7 +210,9 @@ class SerialReadProcess( threading.Thread ):
                 
             else:
                 batteryReading = ord( dataBytes[ 0 ] ) << 8 | ord( dataBytes[ 1 ] )
-                print "Battery voltage is", BATTERY_VOLTAGE_SCALE * ADC_REF_VOLTAGE * float( batteryReading )/1023.0
+                batteryVoltage = BATTERY_VOLTAGE_SCALE * ADC_REF_VOLTAGE * float( batteryReading )/1023.0
+        
+                self.statusQueue.put( ( "b", batteryVoltage ) )
         
         else:
             
@@ -227,8 +230,12 @@ class Connection():
         self.serialPort = serial.Serial( serialPortName, baudRate, timeout=0 )
         
         self.responseQueue = Queue.Queue()
-        self.serialReadProcess = SerialReadProcess( self.serialPort, self.responseQueue )
+        self.statusQueue = Queue.Queue()
+        self.serialReadProcess = SerialReadProcess( 
+            self.serialPort, self.responseQueue, self.statusQueue )
         self.serialReadProcess.start()
+        
+        self.batteryVoltage = 0.0
         
         time.sleep( self.STARTUP_DELAY )
         
@@ -244,7 +251,16 @@ class Connection():
             self.serialReadProcess.stop()
             self.serialReadProcess.join()
             self.serialReadProcess = None
+    
+    #-----------------------------------------------------------------------------------------------
+    def update( self ):
         
+        while not self.statusQueue.empty():
+            statusData = self.statusQueue.get_nowait()
+            
+            if statusData[ 0 ] == "b":
+                self.batteryVoltage = statusData[ 1 ]
+    
     #-----------------------------------------------------------------------------------------------
     def getFirmwareInfo( self ):
         
@@ -266,7 +282,12 @@ class Connection():
             response = FirmwareInfo()
         
         return response   
+    
+    #-----------------------------------------------------------------------------------------------
+    def getBatteryVoltage( self ):
         
+        return self.batteryVoltage
+    
     #-----------------------------------------------------------------------------------------------
     def setOutputs( self, leftMotorSpeed, rightMotorSpeed, panAngle, tiltAngle ):
         
@@ -373,7 +394,13 @@ class MiniDriver():
     def isConnected( self ):
         
         return self.connection != None
-    
+
+    #-----------------------------------------------------------------------------------------------
+    def update( self ):
+        
+        if self.connection != None:
+            self.connection.update()
+        
     #-----------------------------------------------------------------------------------------------
     def getFirmwareInfo( self ):
         
@@ -381,6 +408,16 @@ class MiniDriver():
         
         if self.connection != None:
             result = self.connection.getFirmwareInfo()
+    
+        return result
+    
+    #-----------------------------------------------------------------------------------------------
+    def getBatteryVoltage( self ):
+        
+        result = 0.0
+        
+        if self.connection != None:
+            result = self.connection.getBatteryVoltage()
     
         return result
     
