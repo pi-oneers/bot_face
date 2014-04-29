@@ -270,14 +270,18 @@ def robotUpdate():
         robot.update()
 
 #--------------------------------------------------------------------------------------------------- 
-def sigintHandler( signum, frame ):
-    global isClosing
-    isClosing = True
+def signalHandler( signum, frame ):
+    
+    if signum in [ signal.SIGINT, signal.SIGTERM ]:
+        global isClosing
+        isClosing = True
+        
         
 #--------------------------------------------------------------------------------------------------- 
 if __name__ == "__main__":
     
-    signal.signal( signal.SIGINT, sigintHandler )
+    signal.signal( signal.SIGINT, signalHandler )
+    signal.signal( signal.SIGTERM, signalHandler )
     
     # Create the configuration for the web server
     router = sockjs.tornado.SockJSRouter( 
@@ -324,3 +328,5 @@ if __name__ == "__main__":
         if not robotConnectionResultQueue.empty():
             robot = robotConnectionResultQueue.get()
             robot.disconnect()
+            
+    cameraStreamer.stopStreaming()
