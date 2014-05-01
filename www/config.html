@@ -4,13 +4,16 @@
         <meta charset="utf-8">
         <title>Configuration</title>
         
+        <link href="css/style.css" rel="stylesheet">
+        <link href="css/config.css" rel="stylesheet">
+        
         <script src="js/jquery.js"></script>
         <script src="js/sockjs-0.3.min.js"></script>
         
         <script>
         
         function onSliderChange( slider, socket )
-        {
+        {        
             var angle = slider.val();
 
             if ( slider.attr( "id" ) == "panAngle" )
@@ -63,8 +66,14 @@
                 socket.send( "GetConfig" );
             };
             
-            $( "#panAngle" ).change( function() { onSliderChange( $( this ), socket ); } );
-            $( "#tiltAngle" ).change( function() { onSliderChange( $( this ), socket ); } );
+            // Select tab by default
+            if ( document.location.hash == "" || document.location.hash == "#" )
+            {
+                document.location.hash = "#PanTilt";
+            }
+            
+            $( "#panAngle" ).on( "input", function() { onSliderChange( $( this ), socket ); } );
+            $( "#tiltAngle" ).on( "input", function() { onSliderChange( $( this ), socket ); } );
             $( "#panAngle" ).val( 90 );
             $( "#panAngleDisplay" ).text( "90" );
             $( "#tiltAngle" ).val( 90 );
@@ -88,32 +97,54 @@
     </head>
     <body>
         <br/>
-        <table>
-            <tr>
-                <td></td>
-                <td>PWM for 0</td>
-                <td>PWM for 180</td>
-                <td></td>
-                <td></td>
-            </tr>
-            <tr>
-                <td>Pan</td>
-                <td><input id="panMinPWM" type="text"></td>
-                <td><input id="panMaxPWM" type="text"></td>
-                <td><input id="panAngle" type="range" min="0" max="180" value="90"></td>
-                <td id="panAngleDisplay">23</td>
-            </tr>
-            <tr>
-                <td>Tilt</td>
-                <td><input id="tiltMinPWM" type="text"></td>
-                <td><input id="tiltMaxPWM" type="text"></td>
-                <td><input id="tiltAngle" type="range" min="0" max="180" value="90"></td>
-                <td id="tiltAngleDisplay">23</td>
-            </tr>
-        </table>  
         
+        <article class="tabs">
+        
+            <section id="PanTilt">
+                <h2><a href="#PanTilt">Pan/Tilt</a></h2>
+        
+                <table class="tab_content">
+                    <tr>
+                        <td></td>
+                        <td>PWM for 0</td>
+                        <td>PWM for 180</td>
+                        <td></td>
+                        <td></td>
+                    </tr>
+                    <tr>
+                        <td>Pan</td>
+                        <td><input id="panMinPWM" type="text"></td>
+                        <td><input id="panMaxPWM" type="text"></td>
+                        <td><input id="panAngle" type="range" min="0" max="180" value="90"></td>
+                        <td id="panAngleDisplay">23</td>
+                    </tr>
+                    <tr>
+                        <td>Tilt</td>
+                        <td><input id="tiltMinPWM" type="text"></td>
+                        <td><input id="tiltMaxPWM" type="text"></td>
+                        <td><input id="tiltAngle" type="range" min="0" max="180" value="90"></td>
+                        <td id="tiltAngleDisplay">23</td>
+                    </tr>
+                </table>  
+            </section>
+        
+            <section id="Motors">
+                <h2><a href="#Motors">Motors</a></h2>
+        
+                <p class="tab_content">Hello Motors</p>
+                
+            </section>
+            
+            <section id="Camera">
+                <h2><a href="#Camera">Camera</a></h2>
+        
+                <p class="tab_content">Hello Camera</p>
+                
+            </section>
+       
+        </article>
         <br/>
         
-        <button id="btnSave" type="button">Save</button> 
+        <button id="btnSave" type="button" class="btn">Save</button> 
     </body>
 </html>

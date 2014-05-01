@@ -323,7 +323,17 @@ class Connection():
         msgBuffer = msgBuffer[ :-1 ] + chr( calculateCheckSum( msgBuffer ) )
 
         self.serialPort.write( msgBuffer )
+
+#---------------------------------------------------------------------------------------------------
+class PresetMotorSpeeds:
     
+    #-----------------------------------------------------------------------------------------------
+    def __init__( self, batteryVoltage, maxAbsMotorSpeed, maxAbsTurnSpeed ):
+        
+        self.batteryVoltage = batteryVoltage
+        self.maxAbsMotorSpeed = maxAbsMotorSpeed
+        self.maxAbsTurnSpeed = maxAbsTurnSpeed
+        
 #---------------------------------------------------------------------------------------------------
 class MiniDriver():
     
@@ -337,6 +347,11 @@ class MiniDriver():
     MAX_ABS_MOTOR_SPEED = 100
     MIN_PULSE_WIDTH = 200
     MAX_PULSE_WIDTH = 2800
+    
+    PRESET_MOTOR_SPEEDS = [     # Presets should be ordered by voltage from low to high
+        PresetMotorSpeeds( 5.5, 80.0, 50.0 ),
+        PresetMotorSpeeds( 7.5, 60.0, 30.0 )
+    ]
     
     #-----------------------------------------------------------------------------------------------
     def __init__( self ):
@@ -420,6 +435,23 @@ class MiniDriver():
             result = self.connection.getBatteryVoltage()
     
         return result
+    
+    #-----------------------------------------------------------------------------------------------
+    def getPresetMotorSpeeds( self ):
+        
+        batteryVoltage = self.getBatteryVoltage()
+        maxAbsMotorSpeed = 0.0
+        maxAbsTurnSpeed = 0.0
+        
+        for preset in self.PRESET_MOTOR_SPEEDS:
+            
+            maxAbsMotorSpeed = preset.maxAbsMotorSpeed
+            maxAbsTurnSpeed = preset.maxAbsTurnSpeed
+            
+            if batteryVoltage <= preset.batteryVoltage:
+                break
+                
+        return maxAbsMotorSpeed, maxAbsTurnSpeed
     
     #-----------------------------------------------------------------------------------------------
     def setOutputs( self, leftMotorSpeed, rightMotorSpeed, panAngle, tiltAngle ):

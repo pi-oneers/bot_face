@@ -27,8 +27,6 @@ class RobotController:
     MAX_PULSE_WIDTH = 2600
     
     JOYSTICK_DEAD_ZONE = 0.1
-    MAX_ABS_MOTOR_SPEED = 80.0  # Duty cycle of motors (0 to 100%)
-    MAX_ABS_TURN_SPEED = 60.0   # Duty cycle of motors (0 to 100%)
     MAX_ABS_NECK_SPEED = 30.0   # Degrees per second
     
     #-----------------------------------------------------------------------------------------------
@@ -45,6 +43,9 @@ class RobotController:
         self.panPulseWidthMax = 2100
         self.tiltPulseWidthMin = 550
         self.tiltPulseWidthMax = 2400
+        self.usePresetMotorSpeeds = True
+        self.customMaxAbsMotorSpeed = 50.0
+        self.customMaxAbsTurnSpeed = 30.0
         
         self.tryToLoadConfigFile()
         
@@ -103,6 +104,18 @@ class RobotController:
         if "tiltPulseWidthMax" in configDict:
             self.tiltPulseWidthMax = self.parsePulseWidth( 
                 configDict[ "tiltPulseWidthMax" ], self.tiltPulseWidthMax )
+                
+        if "usePresetMotorSpeeds" in configDict:
+            data = configDict[ "usePresetMotorSpeeds" ]
+            self.usePresetMotorSpeeds = (str( data ).lower() == "true")
+        
+        if "customMaxAbsMotorSpeed" in configDict:
+            self.customMaxAbsMotorSpeed = self.parseDutyCycle( 
+                configDict[ "customMaxAbsMotorSpeed" ] )
+                
+        if "customMaxAbsTurnSpeed" in configDict:
+            self.customMaxAbsTurnSpeed = self.parseDutyCycle( 
+                configDict[ "customMaxAbsTurnSpeed" ] )
     
     #-----------------------------------------------------------------------------------------------
     def parsePulseWidth( self, inputData, defaultValue=MIN_PULSE_WIDTH ):
@@ -115,6 +128,18 @@ class RobotController:
             pass
         
         return max( self.MIN_PULSE_WIDTH, min( result, self.MAX_PULSE_WIDTH ) )
+    
+    #-----------------------------------------------------------------------------------------------
+    def parseDutyCycle( self, inputData ):
+        
+        result = 0.0
+        
+        try:
+            result = float( inputData )
+        except Exception:
+            pass
+        
+        return max( 0.0, min( result, 100.0 ) )
     
     #-----------------------------------------------------------------------------------------------
     def writeConfigFile( self ):
@@ -138,7 +163,10 @@ class RobotController:
             "panPulseWidthMin" : self.panPulseWidthMin,
             "panPulseWidthMax" : self.panPulseWidthMax,
             "tiltPulseWidthMin" : self.tiltPulseWidthMin,
-            "tiltPulseWidthMax" : self.tiltPulseWidthMax
+            "tiltPulseWidthMax" : self.tiltPulseWidthMax,
+            "usePresetMotorSpeeds" : self.usePresetMotorSpeeds,
+            "customMaxAbsMotorSpeed" : self.customMaxAbsMotorSpeed,
+            "customMaxAbsTurnSpeed" : self.customMaxAbsTurnSpeed,
         }
         
         return configDict
@@ -185,16 +213,27 @@ class RobotController:
         
         joystickX, joystickY = self.normaliseJoystickData( joystickX, joystickY )
         
+        if self.usePresetMotorSpeeds:
+            
+            maxAbsMotorSpeed, maxAbsTurnSpeed = self.miniDriver.getPresetMotorSpeeds()
+            
+        else:
+            
+            maxAbsMotorSpeed = self.customMaxAbsMotorSpeed
+            maxAbsTurnSpeed = self.customMaxAbsTurnSpeed
+        
+        print maxAbsMotorSpeed, maxAbsTurnSpeed
+        
         # Set forward speed from joystickY
-        leftMotorSpeed = self.MAX_ABS_MOTOR_SPEED*joystickY
-        rightMotorSpeed = self.MAX_ABS_MOTOR_SPEED*joystickY
+        leftMotorSpeed = maxAbsMotorSpeed*joystickY
+        rightMotorSpeed = maxAbsMotorSpeed*joystickY
         
         # Set turn speed from joystickX
-        leftMotorSpeed += self.MAX_ABS_TURN_SPEED*joystickX
-        rightMotorSpeed -= self.MAX_ABS_TURN_SPEED*joystickX
+        leftMotorSpeed += maxAbsTurnSpeed*joystickX
+        rightMotorSpeed -= maxAbsTurnSpeed*joystickX
         
-        leftMotorSpeed = max( -self.MAX_ABS_MOTOR_SPEED, min( leftMotorSpeed, self.MAX_ABS_MOTOR_SPEED ) )
-        rightMotorSpeed = max( -self.MAX_ABS_MOTOR_SPEED, min( rightMotorSpeed, self.MAX_ABS_MOTOR_SPEED ) )
+        leftMotorSpeed = max( -maxAbsMotorSpeed, min( leftMotorSpeed, maxAbsMotorSpeed ) )
+        rightMotorSpeed = max( -maxAbsMotorSpeed, min( rightMotorSpeed, maxAbsMotorSpeed ) )
         
         self.leftMotorSpeed = leftMotorSpeed*LEFT_MOTOR_SCALE
         self.rightMotorSpeed = rightMotorSpeed
