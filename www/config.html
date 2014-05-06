@@ -42,6 +42,22 @@
             $( "#leftMotorScaleDisplay" ).text( leftMotorScale );
         }
         
+        function onUsePresetMotorSpeedsChange()
+        {
+            var usePresets = $( "#usePresetMotorSpeeds" ).prop( "checked" );
+            
+            if ( usePresets )
+            {
+                $( ".presetSpeeds" ).removeAttr( "style" );
+                $( ".customSpeeds" ).css( "display", "none" );
+            }
+            else
+            {
+                $( ".presetSpeeds" ).css( "display", "none" );
+                $( ".customSpeeds" ).removeAttr( "style" );
+            }
+        }
+        
         function pollForStatus( socket )
         {
             if ( socket.readyState == SockJS.OPEN ) 
@@ -59,7 +75,7 @@
                 tiltPulseWidthMax: $( "#tiltMaxPWM" ).val(),
                 usePresetMotorSpeeds: $( "#usePresetMotorSpeeds" ).prop( "checked" ), 
                 customMaxAbsMotorSpeed: $( "#customMaxAbsMotorSpeed" ).val(),
-                customMaxAbsTurnSpeed: $( "#maxAbsTurnSpeed" ).val(),
+                customMaxAbsTurnSpeed: $( "#customMaxAbsTurnSpeed" ).val(),
                 leftMotorScale: $( "#leftMotorScale" ).val(),
             };
             
@@ -101,6 +117,7 @@
                 if ( "usePresetMotorSpeeds" in configData )
                 {
                     $( "#usePresetMotorSpeeds" ).prop( "checked", true );
+                    onUsePresetMotorSpeedsChange();
                 }
                 
                 if ( "customMaxAbsMotorSpeed" in configData )
@@ -123,6 +140,16 @@
                 if ( "batteryVoltage" in configData )
                 {
                     $( "#batteryVoltage" ).text( configData[ "batteryVoltage" ].toFixed( 3 ) );
+                }
+                
+                if ( "presetMaxAbsMotorSpeed" in configData )
+                {
+                    $( "#presetMaxAbsMotorSpeed" ).text( configData[ "presetMaxAbsMotorSpeed" ] );
+                }
+                
+                if ( "presetMaxAbsTurnSpeed" in configData )
+                {
+                    $( "#presetMaxAbsTurnSpeed" ).text( configData[ "presetMaxAbsTurnSpeed" ] );
                 }
             };
             
@@ -147,6 +174,9 @@
             $( "#tiltAngleDisplay" ).text( "90" );
             
             $( "#leftMotorScale" ).on( "input", function() { onLeftMotorScaleChange( $( this ), socket ); } );
+            
+            onUsePresetMotorSpeedsChange()
+            $( "#usePresetMotorSpeeds" ).on( "input change", onUsePresetMotorSpeedsChange );
             
             $( "#btnSave" ).click( function() {
                 saveConfigData( socket );
@@ -233,15 +263,22 @@
                         <td>Use Preset Motor Speeds</td>
                         <td><input id="usePresetMotorSpeeds" type="checkbox"></td>
                     </tr>
-                    <tr>
+                    <tr class="customSpeeds">
                         <td>Custom Max Absolute Motor Speed</td>
                         <td><input id="customMaxAbsMotorSpeed" type="text"></td>
                     </tr>
-                    <tr>
+                    <tr class="customSpeeds">
                         <td>Custom Max Absolute Turn Speed</td>
                         <td><input id="customMaxAbsTurnSpeed" type="text"></td>
                     </tr>
-                    <tr/>
+                    <tr class="presetSpeeds">
+                        <td>Preset Max Absolute Motor Speed</td>
+                        <td id="presetMaxAbsMotorSpeed">0</td>
+                    </tr>
+                    <tr class="presetSpeeds">
+                        <td>Preset Max Absolute Turn Speed</td>
+                        <td id="presetMaxAbsTurnSpeed">0</td>
+                    </tr>
                     <tr>
                         <td>Left Motor Speed Scale</td>
                         <td><input id="leftMotorScale" type="range" min="0.0" max="2.0" value="1.0" step="0.01"></td>

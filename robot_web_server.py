@@ -51,11 +51,13 @@ import threading
 import Queue
 import camera_streamer
 import robot_controller
+import robot_config
 import json
 import ino_uploader
 import subprocess
 
 robot = None
+robotConfig = robot_config.RobotConfig()
 
 cameraStreamer = None
 scriptPath = os.path.dirname( __file__ )
@@ -64,9 +66,9 @@ robotConnectionResultQueue = Queue.Queue()
 isClosing = False
 
 #--------------------------------------------------------------------------------------------------- 
-def createRobot( resultQueue ):
+def createRobot( robotConfig, resultQueue ):
     
-    r = robot_controller.RobotController()
+    r = robot_controller.RobotController( robotConfig )
     resultQueue.put( r )
             
 #--------------------------------------------------------------------------------------------------- 
@@ -107,11 +109,8 @@ class ConnectionHandler( sockjs.tornado.SockJSConnection ):
                     
                 elif lineData[ 0 ] == "GetConfig":
                     
-                    # Get the current configuration from the robot and return it
-                    configDict = {}
-                    
-                    if robot != None:
-                        configDict = robot.getConfigDict()
+                    # Get the current configuration and return it
+                    configDict = robotConfig.getConfigDict()
                     
                     self.send( json.dumps( configDict ) )
                 
@@ -127,8 +126,7 @@ class ConnectionHandler( sockjs.tornado.SockJSConnection ):
                     except Exception:
                         pass
                     
-                    if robot != None:
-                        robot.setConfigDict( configDict )
+                    robotConfig.setConfigDict( configDict )
                 
                 elif lineData[ 0 ] == "GetRobotStatus":
                     
@@ -282,7 +280,7 @@ if __name__ == "__main__":
     
     # Start connecting to the robot asyncronously
     robotConnectionThread = threading.Thread( target=createRobot, 
-        args=[ robotConnectionResultQueue ] )
+        args=[ robotConfig, robotConnectionResultQueue ] )
     robotConnectionThread.start()
 
     # Now start the web server

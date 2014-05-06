@@ -117,6 +117,10 @@
                         socket.send( "Move " + pos.x + " " + pos.y ); } },
                  endEvent: function(pos) { 
                     if ( socket.readyState == SockJS.OPEN ) {
+                        socket.send( "Move " + pos.x + " " + pos.y ); } },
+                 updateIntervalMS: 500,
+                 updateEvent: function(pos) { 
+                    if ( socket.readyState == SockJS.OPEN ) {
                         socket.send( "Move " + pos.x + " " + pos.y ); } }
              });
              $('#pan_tilt_stick').joystick({
@@ -133,7 +137,11 @@
                         && Math.abs( clickPos.x ) < 0.3 && Math.abs( clickPos.y ) < 0.3 ) 
                     {
                         socket.send( "Centre" ); 
-                    } }
+                    } },
+                 updateIntervalMS: 500,
+                 updateEvent: function(pos) { 
+                    if ( socket.readyState == SockJS.OPEN ) {
+                        socket.send( "PanTilt " + pos.x + " " + pos.y ); } }
              });
              $('#motor_stick').joystick( 'value', 0.0, 0.0 );
              $('#pan_tilt_stick').joystick( 'value', 0.0, 0.0 );

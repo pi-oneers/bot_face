@@ -51,6 +51,8 @@
                 moveEvent: function() {},
                 endEvent: function() {},
                 clickEvent: function() {},
+                updateIntervalMS: 0,
+                updateEvent: function() {},
             }, val);
 
             this.data('joystick-options', options);
@@ -71,7 +73,13 @@
                 
                 $handle.css('left', innerCircleCentreX - $handle.width()/2);
                 $handle.css('top', innerCircleCentreY - $handle.height()/2);
- 
+
+                if ($joystick.data('joystick-options').updateIntervalMS > 0) {
+                    setInterval( function() {
+                        $joystick.data('joystick-options').updateEvent.call($joystick[0], getValue.call($joystick));
+                    }, $joystick.data('joystick-options').updateIntervalMS );
+                }
+                
                 $joystick.on('touchstart mousedown', function(e) {
                     e.preventDefault();
                     $joystick.data('clicked', true);
