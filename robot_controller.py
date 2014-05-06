@@ -8,8 +8,6 @@ import mini_driver
 import json
 import threading
 
-LEFT_MOTOR_SCALE = 0.9
-
 #--------------------------------------------------------------------------------------------------- 
 class RobotController:
     
@@ -46,6 +44,7 @@ class RobotController:
         self.usePresetMotorSpeeds = True
         self.customMaxAbsMotorSpeed = 50.0
         self.customMaxAbsTurnSpeed = 30.0
+        self.leftMotorScale = 1.0
         
         self.tryToLoadConfigFile()
         
@@ -116,6 +115,10 @@ class RobotController:
         if "customMaxAbsTurnSpeed" in configDict:
             self.customMaxAbsTurnSpeed = self.parseDutyCycle( 
                 configDict[ "customMaxAbsTurnSpeed" ] )
+            
+        if "leftMotorScale" in configDict:
+            self.leftMotorScale = self.parseDutyCycle( 
+                configDict[ "leftMotorScale" ] )
     
     #-----------------------------------------------------------------------------------------------
     def parsePulseWidth( self, inputData, defaultValue=MIN_PULSE_WIDTH ):
@@ -167,6 +170,7 @@ class RobotController:
             "usePresetMotorSpeeds" : self.usePresetMotorSpeeds,
             "customMaxAbsMotorSpeed" : self.customMaxAbsMotorSpeed,
             "customMaxAbsTurnSpeed" : self.customMaxAbsTurnSpeed,
+            "leftMotorScale" : self.leftMotorScale,
         }
         
         return configDict
@@ -180,8 +184,12 @@ class RobotController:
     #-----------------------------------------------------------------------------------------------
     def getStatusDict( self ):
         
+        presetMaxAbsMotorSpeed, presetMaxAbsTurnSpeed = self.miniDriver.getPresetMotorSpeeds()
+        
         statusDict = {
-            "batteryVoltage" : self.miniDriver.getBatteryVoltage()
+            "batteryVoltage" : self.miniDriver.getBatteryVoltage(),
+            "presetMaxAbsMotorSpeed" : presetMaxAbsMotorSpeed,
+            "presetMaxAbsTurnSpeed" : presetMaxAbsTurnSpeed
         }
         
         return statusDict
@@ -235,7 +243,7 @@ class RobotController:
         leftMotorSpeed = max( -maxAbsMotorSpeed, min( leftMotorSpeed, maxAbsMotorSpeed ) )
         rightMotorSpeed = max( -maxAbsMotorSpeed, min( rightMotorSpeed, maxAbsMotorSpeed ) )
         
-        self.leftMotorSpeed = leftMotorSpeed*LEFT_MOTOR_SCALE
+        self.leftMotorSpeed = leftMotorSpeed*self.leftMotorScale
         self.rightMotorSpeed = rightMotorSpeed
     
     #-----------------------------------------------------------------------------------------------
