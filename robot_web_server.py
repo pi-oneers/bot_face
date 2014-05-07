@@ -149,7 +149,25 @@ class ConnectionHandler( sockjs.tornado.SockJSConnection ):
                         self.extractJoystickData( lineData[ 1 ], lineData[ 2 ] )
                     
                     if robot != None:
-                        robot.setMotorJoystickPos( motorJoystickX, motorJoystickY )                    
+                        robot.setMotorJoystickPos( motorJoystickX, motorJoystickY )     
+                        
+                elif lineData[ 0 ] == "SetMotorSpeeds" and len( lineData ) >= 3:
+                    
+                    leftMotorSpeed = 0.0
+                    rightMotorSpeed = 0.0
+                    
+                    try:
+                        leftMotorSpeed = float( lineData[ 1 ] )
+                    except Exception:
+                        pass
+                    
+                    try:
+                        rightMotorSpeed = float( lineData[ 2 ] )
+                    except Exception:
+                        pass
+                    
+                    if robot != None:
+                        robot.setMotorSpeeds( leftMotorSpeed, rightMotorSpeed )
                     
                 elif lineData[ 0 ] == "PanTilt" and len( lineData ) >= 3:
                     

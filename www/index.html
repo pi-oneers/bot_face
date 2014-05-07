@@ -155,6 +155,8 @@
                     socket.send( "Shutdown" );
                 }
                 
+                $( "#shutdownProgress" ).removeAttr('style');
+                $( "#shutdownText" ).text( "Shutting Down" );
                 
                 var modalShutdownDialog = $( "#modalShutdownDialog" );
                 modalShutdownDialog.css( "opacity", 1 );

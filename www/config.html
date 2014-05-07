@@ -195,19 +195,19 @@
                 
                 if ( socket.readyState == SockJS.OPEN ) 
                 {
-                    socket.send( "Move 0.0 1.0" );  // Start driving forwards
+                    socket.send( "SetMotorSpeeds 100.0 100.0" );  // Start driving forwards
                 }
                 
                 setTimeout( function() {
                     if ( socket.readyState == SockJS.OPEN ) 
                     {
-                        socket.send( "Move 0.0 -1.0" );  // Start driving backwards
+                        socket.send( "SetMotorSpeeds -100.0 -100.0" );  // Start driving backwards
                     }
                     
                     setTimeout( function() {
                         if ( socket.readyState == SockJS.OPEN ) 
                         {
-                            socket.send( "Move 0.0 0.0" );  // Stop
+                            socket.send( "SetMotorSpeeds 0.0 0.0" );  // Stop
                         }
                         
                         drivingStraight = false;

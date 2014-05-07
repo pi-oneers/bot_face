@@ -150,6 +150,15 @@ class RobotController:
     #-----------------------------------------------------------------------------------------------
     def setMotorSpeeds( self, leftMotorSpeed, rightMotorSpeed ):
         
+        if self.robotConfig.usePresetMotorSpeeds:
+            
+            maxAbsMotorSpeed, maxAbsTurnSpeed = self.miniDriver.getPresetMotorSpeeds()
+            
+        else:
+            
+            maxAbsMotorSpeed = self.robotConfig.customMaxAbsMotorSpeed
+            maxAbsTurnSpeed = self.robotConfig.customMaxAbsTurnSpeed
+        
         self.leftMotorSpeed = max( -maxAbsMotorSpeed, min( leftMotorSpeed, maxAbsMotorSpeed ) )
         self.rightMotorSpeed = max( -maxAbsMotorSpeed, min( rightMotorSpeed, maxAbsMotorSpeed ) )
         
