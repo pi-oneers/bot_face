@@ -35,6 +35,10 @@ import Queue
 import mini_driver
 import threading
 
+import pibot
+
+USE_PIBOT = True
+
 #--------------------------------------------------------------------------------------------------- 
 class RobotController:
     
@@ -54,10 +58,13 @@ class RobotController:
     #-----------------------------------------------------------------------------------------------
     def __init__( self, robotConfig ):
         
-        self.miniDriver = mini_driver.MiniDriver()
-        connected = self.miniDriver.connect()
-        if not connected:
-            raise Exception( "Unable to connect to the mini driver" )
+        if USE_PIBOT:
+            self.robot = pibot.PiBot()
+        else:
+            self.robot = mini_driver.MiniDriver()
+            connected = self.robot.connect()
+            if not connected:
+                raise Exception( "Unable to connect to the mini driver" )
         
         self.robotConfig = robotConfig
         self.leftMotorSpeed = 0
@@ -80,18 +87,22 @@ class RobotController:
     #-----------------------------------------------------------------------------------------------
     def disconnect( self ):
         
-        self.miniDriver.disconnect()
+        if not USE_PIBOT:
+            self.robot.disconnect()
     
     #-----------------------------------------------------------------------------------------------
     def getStatusDict( self ):
         
-        presetMaxAbsMotorSpeed, presetMaxAbsTurnSpeed = self.miniDriver.getPresetMotorSpeeds()
-        
-        statusDict = {
-            "batteryVoltage" : self.miniDriver.getBatteryVoltage(),
-            "presetMaxAbsMotorSpeed" : presetMaxAbsMotorSpeed,
-            "presetMaxAbsTurnSpeed" : presetMaxAbsTurnSpeed
-        }
+        if USE_PIBOT:
+            statusDict = {}
+        else:
+            presetMaxAbsMotorSpeed, presetMaxAbsTurnSpeed = self.robot.getPresetMotorSpeeds()
+            
+            statusDict = {
+                "batteryVoltage" : self.robot.getBatteryVoltage(),
+                "presetMaxAbsMotorSpeed" : presetMaxAbsMotorSpeed,
+                "presetMaxAbsTurnSpeed" : presetMaxAbsTurnSpeed
+            }
         
         return statusDict
     
@@ -122,14 +133,18 @@ class RobotController:
         
         joystickX, joystickY = self.normaliseJoystickData( joystickX, joystickY )
         
-        if self.robotConfig.usePresetMotorSpeeds:
-            
-            maxAbsMotorSpeed, maxAbsTurnSpeed = self.miniDriver.getPresetMotorSpeeds()
-            
+        if USE_PIBOT:
+            maxAbsMotorSpeed = 255
+            maxAbsTurnSpeed = 180
         else:
-            
-            maxAbsMotorSpeed = self.robotConfig.customMaxAbsMotorSpeed
-            maxAbsTurnSpeed = self.robotConfig.customMaxAbsTurnSpeed
+            if self.robotConfig.usePresetMotorSpeeds:
+                
+                maxAbsMotorSpeed, maxAbsTurnSpeed = self.robot.getPresetMotorSpeeds()
+                
+            else:
+                
+                maxAbsMotorSpeed = self.robotConfig.customMaxAbsMotorSpeed
+                maxAbsTurnSpeed = self.robotConfig.customMaxAbsTurnSpeed
         
         # Set forward speed from joystickY
         leftMotorSpeed = maxAbsMotorSpeed*joystickY
@@ -150,14 +165,18 @@ class RobotController:
     #-----------------------------------------------------------------------------------------------
     def setMotorSpeeds( self, leftMotorSpeed, rightMotorSpeed ):
         
-        if self.robotConfig.usePresetMotorSpeeds:
-            
-            maxAbsMotorSpeed, maxAbsTurnSpeed = self.miniDriver.getPresetMotorSpeeds()
-            
+        if USE_PIBOT:
+            maxAbsMotorSpeed = 255
+            maxAbsTurnSpeed = 180
         else:
-            
-            maxAbsMotorSpeed = self.robotConfig.customMaxAbsMotorSpeed
-            maxAbsTurnSpeed = self.robotConfig.customMaxAbsTurnSpeed
+            if self.robotConfig.usePresetMotorSpeeds:
+                
+                maxAbsMotorSpeed, maxAbsTurnSpeed = self.robot.getPresetMotorSpeeds()
+                
+            else:
+                
+                maxAbsMotorSpeed = self.robotConfig.customMaxAbsMotorSpeed
+                maxAbsTurnSpeed = self.robotConfig.customMaxAbsTurnSpeed
         
         self.leftMotorSpeed = max( -maxAbsMotorSpeed, min( leftMotorSpeed, maxAbsMotorSpeed ) )
         self.rightMotorSpeed = max( -maxAbsMotorSpeed, min( rightMotorSpeed, maxAbsMotorSpeed ) )
@@ -188,7 +207,7 @@ class RobotController:
     #-----------------------------------------------------------------------------------------------
     def update( self ):
         
-        if not self.miniDriver.isConnected():
+        if not USE_PIBOT and not self.robot.isConnected():
             return
         
         curTime = time.time()
@@ -209,21 +228,33 @@ class RobotController:
         self.panAngle = max( self.MIN_ANGLE, min( self.panAngle, self.MAX_ANGLE ) )
         self.tiltAngle = max( self.MIN_ANGLE, min( self.tiltAngle, self.MAX_ANGLE ) )
         
-        # Update the mini driver
-        self.miniDriver.setOutputs(
-            self.leftMotorSpeed, self.rightMotorSpeed, self.panAngle, self.tiltAngle )
-        self.miniDriver.update()
-        
-        # Send servo settings if needed
-        if curTime - self.lastServoSettingsSendTime >= self.TIME_BETWEEN_SERVO_SETTING_UPDATES:
+        if USE_PIBOT:
             
-            self.miniDriver.setPanServoLimits( 
-                self.robotConfig.panPulseWidthMin, 
-                self.robotConfig.panPulseWidthMax )
-            self.miniDriver.setTiltServoLimits( 
-                self.robotConfig.tiltPulseWidthMin, 
-                self.robotConfig.tiltPulseWidthMax )
- 
-            self.lastServoSettingsSendTime = curTime
+            # Send motor speeds
+            self.robot.setMotorSpeeds( self.leftMotorSpeed, self.rightMotorSpeed )
+            self.robot.setServoAngle( self.tiltAngle )
+            
+            # Turn off lights
+            for pixelIdx in range( self.robot.NUM_NEO_PIXELS ):
+                self.robot.setNeoPixelColour( pixelIdx, 0, 0, 0 )
+            
+        else:
+            
+            # Update the mini driver
+            self.robot.setOutputs(
+                self.leftMotorSpeed, self.rightMotorSpeed, self.panAngle, self.tiltAngle )
+            self.robot.update()
+            
+            # Send servo settings if needed
+            if curTime - self.lastServoSettingsSendTime >= self.TIME_BETWEEN_SERVO_SETTING_UPDATES:
+                
+                self.robot.setPanServoLimits( 
+                    self.robotConfig.panPulseWidthMin, 
+                    self.robotConfig.panPulseWidthMax )
+                self.robot.setTiltServoLimits( 
+                    self.robotConfig.tiltPulseWidthMin, 
+                    self.robotConfig.tiltPulseWidthMax )
+    
+                self.lastServoSettingsSendTime = curTime
             
         self.lastUpdateTime = curTime

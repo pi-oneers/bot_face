@@ -296,6 +296,10 @@ if __name__ == "__main__":
     # Create a camera streamer
     cameraStreamer = camera_streamer.CameraStreamer()
     
+    # Make sure SPI module is loaded (shouldn't need to do this...)
+    subprocess.call( [ "modprobe", "spi_bcm2708" ] )
+    time.sleep( 0.5 ) 
+    
     # Start connecting to the robot asyncronously
     robotConnectionThread = threading.Thread( target=createRobot, 
         args=[ robotConfig, robotConnectionResultQueue ] )

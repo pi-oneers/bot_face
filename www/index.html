@@ -41,6 +41,13 @@
             width: 640px;
         }
         
+        #cameraWrapper {
+            /*ransform:rotate(180deg);*/
+            -moz-transform:rotate(180deg);
+            /* Safari and Chrome */
+            -webkit-transform:rotate(180deg);
+        }
+        
         #motor_stick {
             position: fixed;
             top: 200px;
@@ -196,7 +203,9 @@
   </head>
 
   <body>
-    <p><img id="camera" src=""/></p>
+    <div id="cameraWrapper">
+      <p><img id="camera" src=""/></p>
+    </div>
     
     <div class="joystick" id="motor_stick">
       <div class="inner_circle"></div>
