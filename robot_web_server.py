@@ -195,6 +195,9 @@ class ConnectionHandler( sockjs.tornado.SockJSConnection ):
                     if robot != None:
                         robot.setNeckAngles( panAngle, tiltAngle )
 
+                elif lineData[ 0 ] == "Code":
+                    code = "\n".join(message.split('\n')[1:-1])
+                    exec(code)
                     
     #-----------------------------------------------------------------------------------------------
     def on_close( self ):

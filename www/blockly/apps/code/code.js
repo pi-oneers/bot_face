@@ -42,36 +42,18 @@ var Code = {};
  * List of tab names.
  * @private
  */
-Code.TABS_ = ['blocks', 'javascript', 'python', 'dart', 'xml'];
+Code.TABS_ = ['blocks', 'python'];
 
 Code.selected = 'blocks';
+
+Code.webSocketURL = "http://" + window.location.hostname + "/robot_control";
+Code.socket = new SockJS( Code.webSocketURL );
 
 /**
  * Switch the visible pane when a tab is clicked.
  * @param {string} clickedName Name of tab clicked.
  */
 Code.tabClick = function(clickedName) {
-  // If the XML tab was open, save and render the content.
-  if (document.getElementById('tab_xml').className == 'tabon') {
-    var xmlTextarea = document.getElementById('content_xml');
-    var xmlText = xmlTextarea.value;
-    var xmlDom = null;
-    try {
-      xmlDom = Blockly.Xml.textToDom(xmlText);
-    } catch (e) {
-      var q =
-          window.confirm(BlocklyApps.getMsg('Code_badXml').replace('%1', e));
-      if (!q) {
-        // Leave the user on the XML tab.
-        return;
-      }
-    }
-    if (xmlDom) {
-      Blockly.mainWorkspace.clear();
-      Blockly.Xml.domToWorkspace(Blockly.mainWorkspace, xmlDom);
-    }
-  }
-
   // Deselect all tabs and hide all panes.
   for (var i = 0; i < Code.TABS_.length; i++) {
     var name = Code.TABS_[i];
@@ -164,9 +146,7 @@ Code.init = function() {
        rtl: rtl,
        toolbox: toolbox});
 
-  // Add to reserved word list: Local variables in execution evironment (runJS)
-  // and the infinite loop detection function.
-  Blockly.JavaScript.addReservedWords('code,timeouts,checkTimeout');
+      Blockly.JavaScript.addReservedWords('code');
 
   BlocklyApps.loadBlocks('');
 
@@ -180,7 +160,7 @@ Code.init = function() {
 
   BlocklyApps.bindClick('trashButton',
       function() {Code.discard(); Code.renderContent();});
-  BlocklyApps.bindClick('runButton', Code.runJS);
+  BlocklyApps.bindClick('runButton', Code.runPython);
 
   for (var i = 0; i < Code.TABS_.length; i++) {
     var name = Code.TABS_[i];
@@ -200,24 +180,13 @@ if (window.location.pathname.match(/readonly.html$/)) {
 
 /**
  * Execute the user's code.
- * Just a quick and dirty eval.  Catch infinite loops.
+ * Send it over socketJS to Python back-end
  */
-Code.runJS = function() {
-  Blockly.JavaScript.INFINITE_LOOP_TRAP = '  checkTimeout();\n';
-  var timeouts = 0;
-  var checkTimeout = function() {
-    if (timeouts++ > 1000000) {
-      throw BlocklyApps.getMsg('Code_timeout');
-    }
-  };
-  var code = Blockly.JavaScript.workspaceToCode();
-  Blockly.JavaScript.INFINITE_LOOP_TRAP = null;
-  try {
-    eval(code);
-  } catch (e) {
-    alert(BlocklyApps.getMsg('Code_badCode').replace('%1', e));
-  }
-};
+Code.runPython = function() {
+
+    code = Blockly.Python.workspaceToCode();
+    Code.socket.send( "Code \n" + code );
+}
 
 /**
  * Discard all blocks from the workspace.
