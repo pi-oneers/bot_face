@@ -1,7 +1,7 @@
 {
 	"@metadata": {
 		"author": "Ellen Spertus <ellen.spertus@gmail.com>",
-		"lastupdated": "2014-04-23 18:03:11.134244",
+		"lastupdated": "2014-05-21 20:16:32.719293",
 		"locale": "en",
 		"messagedocumentation" : "qqq"
 	},
@@ -35,6 +35,7 @@
 	"Code.title": "Code",
 	"Code.blocks": "Blocks",
 	"Code.trashTooltip": "Discard all blocks.",
+	"PiBot.catMovement": "Movement",
 	"Graph.title": "Graphing Calculator",
 	"Apps.indexTitle": "Blockly Apps",
 	"Apps.indexFooter": "Blockly is free and open source.  To contribute code or translations to Blockly, or to use Blockly in your own app, visit %1.",

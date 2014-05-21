@@ -146,7 +146,30 @@ Code.init = function() {
        rtl: rtl,
        toolbox: toolbox});
 
-      Blockly.JavaScript.addReservedWords('code');
+  Blockly.JavaScript.addReservedWords('code');
+
+  Blockly.Blocks['pibot_setmotorspeed'] = {
+      init: function() {
+          this.setHelpUrl('');
+          this.setColour(0);
+          this.setPreviousStatement(true);
+          this.appendValueInput('LEFT')
+              .setCheck('Number')
+              .appendField('set left motor to');
+          this.appendValueInput('RIGHT')
+              .setCheck('Number')
+              .appendField('set right motor to');
+          this.setOutput(false);
+          this.setTooltip('');
+      }
+  };
+
+  Blockly.Python['pibot_setmotorspeed'] = function(block) {
+      var left = Blockly.Python.valueToCode(block, 'LEFT', Blockly.Python.ORDER_NONE) || '0';
+      var right = Blockly.Python.valueToCode(block, 'RIGHT', Blockly.Python.ORDER_NONE) || '0';
+      code = "robot.setMotorSpeeds(" + left + ", " + right + ")\n";
+      return code
+  }
 
   BlocklyApps.loadBlocks('');
 
